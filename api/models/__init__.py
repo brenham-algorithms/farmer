@@ -15,6 +15,7 @@ from .models import (
     TickerParams,
     VwapMeanReversionParams,
     VwapMeanReversionWithScalingParams,
+    VwapMeanReversionLadderParams,
 )
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "EmaMeanReversionParams",
     "VwapMeanReversionParams",
     "VwapMeanReversionWithScalingParams",
+    "VwapMeanReversionLadderParams",
     "StrategyParams",
     "CsvDataSource",
     "ProjectXDataSource",

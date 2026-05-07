@@ -6,11 +6,10 @@ from typing import Any, Callable, Dict, List
 from tabulate import tabulate
 
 from api.models import StrategyParams
-from calculations import DeltaEvent, DeltaWindow, calculate_static_levels
+from calculations import DeltaWindow, calculate_static_levels
 from core import Tick
 
-from .handlers import static_bounce_handler
-
+from .static_bounce import _static_bounce_handler
 
 @dataclass
 class ZoneAttempt:
@@ -314,7 +313,7 @@ class StaticBounceWithDelta:
         self.cooldowns.clear()
 
     def get_handler(self) -> Callable:
-        return static_bounce_handler
+        return _static_bounce_handler
 
     def __repr__(self) -> str:
         headers = ["Level", "Hits", "Score"]

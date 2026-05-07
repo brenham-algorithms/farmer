@@ -23,6 +23,8 @@ async def run_backtest_async(
         return await _run_backtest_async_without_seeding(config, logger)
     elif config.strategy.strategy_params.kind == "vwap_mean_reversion_with_scaling":
         return await _run_backtest_async_without_seeding(config, logger)
+    elif config.strategy.strategy_params.kind == "vwap_mean_reversion_ladder":
+        return await _run_backtest_async_without_seeding(config, logger)
     else:
         raise ValueError(
             f"Unsupported strategy kind: {config.strategy.strategy_params.kind}"
@@ -74,14 +76,14 @@ async def _run_backtest_async_without_seeding(
 
         results.append(
             BacktestResult(
-                pnl=state["total_pnl"],
+                pnl=round(state["total_pnl"], 2),
                 trades_file=str(ticker.trade_path),
             )
         )
 
     return BacktestResponse(
         backtest_name=config.name,
-        total_pnl=sum(r.pnl for r in results),
+        total_pnl=round(sum(r.pnl for r in results), 2),
         results=results,
     )
 
@@ -150,13 +152,13 @@ async def _run_backtest_async_with_seeding(
 
         results.append(
             BacktestResult(
-                pnl=state["total_pnl"],
+                pnl=round(state["total_pnl"], 2),
                 trades_file=str(ticker.trade_path),
             )
         )
 
     return BacktestResponse(
         backtest_name=config.name,
-        total_pnl=sum(r.pnl for r in results),
+        total_pnl=round(sum(r.pnl for r in results), 2),
         results=results,
     )

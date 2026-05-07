@@ -1,13 +1,14 @@
 import logging
 from typing import Any, Callable, Dict, List
+from zoneinfo import ZoneInfo
 
+from colorama import Fore
 from tabulate import tabulate
 
 from api.models import StrategyParams
 from calculations import calculate_static_levels
+from config import log_with_color
 from core import Tick
-
-from .handlers import static_bounce_handler
 
 
 class StaticBounce:
@@ -143,7 +144,7 @@ class StaticBounce:
         self.last_level_traded = None
 
     def get_handler(self) -> Callable:
-        return static_bounce_handler
+        return _static_bounce_handler
 
     def __repr__(self) -> str:
         headers = ["Level", "Hits", "Score"]
@@ -180,3 +181,58 @@ class StaticBounce:
             + "\n\nTop Resistance Levels:\n"
             + resistance_table
         )
+
+
+def _static_bounce_handler(
+    tick: Tick, logger: logging.Logger, state: Dict[str, Any]
+) -> None:
+    """
+    Handler for processing ticks in a StaticBounce backtest.
+    Updates the state with PnL when a position is closed.
+    """
+    # Handle position
+    if state["position"] is None:
+        state["position"] = state["strategy"].check(tick, tick.t)
+        if state["position"] is None:
+            return
+
+    tick_size = state["tick_size"]
+    tick_value = state["tick_value"]
+    market_price = state["position"]["entry"]
+
+    price_diff = 0
+    if state["position"]["direction"] == "LONG":
+        if tick.price >= state["position"]["take_profit"]:
+            price_diff = state["position"]["take_profit"] - market_price
+        elif tick.price <= state["position"]["stop_loss"]:
+            price_diff = state["position"]["stop_loss"] - market_price
+        else:
+            return
+    else:
+        if tick.price <= state["position"]["take_profit"]:
+            price_diff = market_price - state["position"]["take_profit"]
+        elif tick.price >= state["position"]["stop_loss"]:
+            price_diff = market_price - state["position"]["stop_loss"]
+        else:
+            return
+
+    ticks_moved = price_diff / tick_size
+    profit_loss = round(ticks_moved * tick_value, 2)
+    state["total_pnl"] += profit_loss
+
+    ts_start = (
+        state["position"]["timestamp"]
+        .replace(microsecond=0)
+        .astimezone(ZoneInfo("America/Chicago"))
+    )
+    ts_end = tick.t.replace(microsecond=0).astimezone(ZoneInfo("America/Chicago"))
+
+    log_with_color(
+        logger,
+        f"Trade completed, Start = {ts_start}, End = {ts_end}, PnL = ${profit_loss:.2f}",
+        Fore.GREEN if profit_loss > 0 else Fore.RED,
+        "info",
+    )
+
+    # Reset position
+    state["position"] = None

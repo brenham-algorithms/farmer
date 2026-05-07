@@ -1,13 +1,15 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional
+from zoneinfo import ZoneInfo
+
+from colorama import Fore
 
 from api.models import EmaMeanReversionParams
 from calculations.atr import LiveAtr
 from calculations.ema import LiveEma
+from config import log_with_color
 from core import Tick
-
-from .handlers import mean_reversion_ema_handler
 
 
 class EmaMeanReversion:
@@ -146,7 +148,7 @@ class EmaMeanReversion:
         self._cooldown_until = None
 
     def get_handler(self) -> Callable:
-        return mean_reversion_ema_handler
+        return _mean_reversion_ema_handler
 
     def __repr__(self) -> str:
         return (
@@ -154,3 +156,60 @@ class EmaMeanReversion:
             f"entry_dist={self.entry_distance_ticks}, "
             f"risk={self.risk_ticks}, max_atr={self.max_atr})"
         )
+
+
+def _mean_reversion_ema_handler(
+    tick: Tick, logger: logging.Logger, state: Dict[str, Any]
+) -> None:
+    strategy = state["strategy"]
+
+    # Handler owns the EMA and ATR updates
+    strategy.ema.on_tick(tick)
+    strategy.atr.on_tick(tick)
+
+    if state["position"] is None:
+        state["position"] = strategy.check(
+            tick, tick.t, ema=strategy.ema.value, atr=strategy.atr.value
+        )
+        return
+
+    tick_size = state["tick_size"]
+    tick_value = state["tick_value"]
+    market_price = state["position"]["entry"]
+    ema_now = strategy.ema.value
+
+    if state["position"]["direction"] == "LONG":
+        if tick.price >= ema_now:
+            price_diff = tick.price - market_price
+        elif tick.price <= state["position"]["stop_loss"]:
+            price_diff = state["position"]["stop_loss"] - market_price
+        else:
+            return
+    else:
+        if tick.price <= ema_now:
+            price_diff = market_price - tick.price
+        elif tick.price >= state["position"]["stop_loss"]:
+            price_diff = market_price - state["position"]["stop_loss"]
+        else:
+            return
+
+    ticks_moved = price_diff / tick_size
+    profit_loss = round(ticks_moved * tick_value, 2)
+    state["total_pnl"] += profit_loss
+
+    ts_start = (
+        state["position"]["timestamp"]
+        .replace(microsecond=0)
+        .astimezone(ZoneInfo("America/Chicago"))
+    )
+    ts_end = tick.t.replace(microsecond=0).astimezone(ZoneInfo("America/Chicago"))
+
+    log_with_color(
+        logger,
+        f"Trade completed, Start = {ts_start}, End = {ts_end}, "
+        f"PnL = ${profit_loss:.2f}, EMA at exit = {ema_now:.4f}",
+        Fore.GREEN if profit_loss > 0 else Fore.RED,
+        "info",
+    )
+
+    state["position"] = None

@@ -108,12 +108,52 @@ class VwapMeanReversionWithScalingParams(BaseModel):
     absorption_ticks: int = 2
 
 
+class VwapMeanReversionLadderParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["vwap_mean_reversion_ladder"] = "vwap_mean_reversion_ladder"
+    precision: int = 2
+ 
+    # Session
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+ 
+    # Entry ladder bands (in standard deviations from VWAP)
+    entry_std_1: float = 2.0  # 1 contract
+    entry_std_2: float = 2.5  # +1 contract (total 2)
+    entry_std_3: float = 3.0  # +2 contracts (total 4)
+    max_std_dev: float = 4.0  # skip entries beyond this
+    min_std_dev: Optional[float] = None
+ 
+    # TP ladder bands (price must cross INSIDE these bands toward VWAP)
+    tp_std_4: float = 2.0  # cut 2 at this band (when holding 4)
+    tp_std_2: float = 1.0  # cut 1 at this band (when holding 2)
+    # 1 contract closes at VWAP (no param needed)
+ 
+    # Risk
+    risk_ticks: int = 80  # hard stop from first entry, all contracts
+    # risk_std: float = 3.2  # hard stop in standard deviations from VWAP, all contracts
+ 
+    # Session filter
+    min_session_volume: int = 1000
+ 
+    # Confirmation (shared across all levels; set attempt_seconds=0 to disable)
+    attempt_seconds: int = 0  # 0 = no confirmation
+    delta_ratio_threshold: float = 0.0
+    min_response_ticks: int = 0
+    min_attempt_volume: int = 0
+    min_absorbed_volume: int = 0
+    absorption_ticks: int = 2
+    cooldown_seconds: int = 300
+
+
 StrategyParams = Union[
     StaticBounceParams,
     StaticBounceWithDeltaParams,
     EmaMeanReversionParams,
     VwapMeanReversionParams,
     VwapMeanReversionWithScalingParams,
+    VwapMeanReversionLadderParams,
 ]
 
 
