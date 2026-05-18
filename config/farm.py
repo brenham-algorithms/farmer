@@ -3,20 +3,20 @@ from typing import List
 import yaml
 from pydantic import BaseModel
 
-from api.models import StrategyConfig
+from api.models import FarmerConfig
 
 
 class FarmSettings(BaseModel):
-    strategies: List[StrategyConfig]
+    farmers: List[FarmerConfig]
 
     @classmethod
     def build(cls, args) -> "FarmSettings":
         with open(args.config, "r") as f:
             raw = yaml.safe_load(f) or {}
 
-        data = raw.get("farm", {})
+        data = raw.get("farmers", [])
 
-        return cls(**data)
+        return cls(farmers=data)
 
     @classmethod
     def set_args(cls, parser):
@@ -25,5 +25,5 @@ class FarmSettings(BaseModel):
         )
 
         parser.add_argument(
-            "--strategy", type=str, help="The strategy name to run in production"
+            "--name", type=str, help="The farmer name to run in production"
         )

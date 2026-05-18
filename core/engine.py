@@ -2,6 +2,8 @@ import asyncio
 import logging
 from typing import Any, Awaitable, Callable, Dict
 
+from tickers import TickerState
+
 from .protocols import AsyncTicker, Ticker
 from .types import Tick
 
@@ -9,8 +11,8 @@ from .types import Tick
 async def run_engine_async(
     ticker: AsyncTicker,
     logger: logging.Logger,
-    state: Dict[str, Any],
-    on_tick: Callable[[Tick, logging.Logger, Dict[str, Any]], Awaitable[None] | None],
+    state: TickerState,
+    on_tick: Callable[[Tick, logging.Logger, TickerState], Awaitable[None] | None],
 ):
     """
     Asynchronous ticker runner.
@@ -24,8 +26,8 @@ async def run_engine_async(
 def run_engine(
     ticker: Ticker,
     logger: logging.Logger,
-    state: Dict[str, Any],
-    ontick: Callable[[Tick, logging.Logger, Dict[str, Any]], None],
+    state: TickerState,
+    ontick: Callable[[Tick, logging.Logger, TickerState], None],
 ) -> None:
     """
     Synchronous ticker runner.

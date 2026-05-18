@@ -8,14 +8,15 @@ from .models import (
     EmaMeanReversionParams,
     ProjectXDataSource,
     QueryConfig,
+    FarmerConfig,
     StaticBounceParams,
     StaticBounceWithDeltaParams,
     StrategyConfig,
     StrategyParams,
     TickerParams,
     VwapMeanReversionParams,
-    VwapMeanReversionWithScalingParams,
     VwapMeanReversionLadderParams,
+    OpeningRangeBreakoutParams,
 )
 
 __all__ = [
@@ -23,8 +24,8 @@ __all__ = [
     "StaticBounceWithDeltaParams",
     "EmaMeanReversionParams",
     "VwapMeanReversionParams",
-    "VwapMeanReversionWithScalingParams",
     "VwapMeanReversionLadderParams",
+    "OpeningRangeBreakoutParams",
     "StrategyParams",
     "CsvDataSource",
     "ProjectXDataSource",
@@ -34,6 +35,7 @@ __all__ = [
     "StrategyConfig",
     "BacktestConfig",
     "QueryConfig",
+    "FarmerConfig",
     "BacktestResult",
     "BacktestResponse",
 ]

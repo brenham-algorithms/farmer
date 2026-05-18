@@ -6,29 +6,17 @@ from aggregators import CsvAggregator
 from api.models import BacktestConfig, BacktestResponse, BacktestResult
 from core import run_engine_async
 from strategies import build_strategy
-from tickers import CsvTicker
+from tickers import CsvTicker, TickerState
 
 
 async def run_backtest_async(
     config: BacktestConfig,
     logger: Optional[logging.Logger] = None,
 ) -> BacktestResponse:
-    if config.strategy.strategy_params.kind == "static_bounce":
+    if config.strategy.aggregation_params is not None:
         return await _run_backtest_async_with_seeding(config, logger)
-    elif config.strategy.strategy_params.kind == "static_bounce_with_delta":
-        return await _run_backtest_async_with_seeding(config, logger)
-    elif config.strategy.strategy_params.kind == "mean_reversion_ema":
-        return await _run_backtest_async_with_seeding(config, logger)
-    elif config.strategy.strategy_params.kind == "vwap_mean_reversion":
-        return await _run_backtest_async_without_seeding(config, logger)
-    elif config.strategy.strategy_params.kind == "vwap_mean_reversion_with_scaling":
-        return await _run_backtest_async_without_seeding(config, logger)
-    elif config.strategy.strategy_params.kind == "vwap_mean_reversion_ladder":
-        return await _run_backtest_async_without_seeding(config, logger)
     else:
-        raise ValueError(
-            f"Unsupported strategy kind: {config.strategy.strategy_params.kind}"
-        )
+        return await _run_backtest_async_without_seeding(config, logger)
 
 
 async def _run_backtest_async_without_seeding(
@@ -57,16 +45,14 @@ async def _run_backtest_async_without_seeding(
         # Initialize / reset requested strategy.
         # The candles list is empty because no seeding is required for this backtest mode
         strategy = build_strategy(config.strategy, logger, [])
-        handler = strategy.get_handler()
+        handler = strategy.get_backtest_handler()
 
         # Initialize / reset handler state
-        state: Dict[str, Any] = {
-            "total_pnl": 0.00,
-            "position": None,
-            "strategy": strategy,
-            "tick_size": config.strategy.strategy_params.tick_size,
-            "tick_value": config.strategy.strategy_params.tick_value,
-        }
+        state: TickerState = TickerState(
+            strategy=strategy,
+            total_pnl=0.00,
+            position=None,
+        )
 
         ticker = CsvTicker(logger, config.strategy.ticker_params, bt_date)
 
@@ -76,7 +62,7 @@ async def _run_backtest_async_without_seeding(
 
         results.append(
             BacktestResult(
-                pnl=round(state["total_pnl"], 2),
+                pnl=round(state.total_pnl, 2),
                 trades_file=str(ticker.trade_path),
             )
         )
@@ -133,16 +119,14 @@ async def _run_backtest_async_with_seeding(
 
         # Initialize / reset requested strategy
         strategy = build_strategy(config.strategy, logger, candles)
-        handler = strategy.get_handler()
+        handler = strategy.get_backtest_handler()
 
         # Initialize / reset handler state
-        state: Dict[str, Any] = {
-            "total_pnl": 0.00,
-            "position": None,
-            "strategy": strategy,
-            "tick_size": config.strategy.strategy_params.tick_size,
-            "tick_value": config.strategy.strategy_params.tick_value,
-        }
+        state: TickerState = TickerState(
+            strategy=strategy,
+            total_pnl=0.00,
+            position=None,
+        )
 
         ticker = CsvTicker(logger, config.strategy.ticker_params, bt_date)
 
@@ -152,7 +136,7 @@ async def _run_backtest_async_with_seeding(
 
         results.append(
             BacktestResult(
-                pnl=round(state["total_pnl"], 2),
+                pnl=round(state.total_pnl, 2),
                 trades_file=str(ticker.trade_path),
             )
         )

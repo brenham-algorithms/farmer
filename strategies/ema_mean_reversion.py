@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional
 from zoneinfo import ZoneInfo
@@ -10,7 +11,9 @@ from calculations.atr import LiveAtr
 from calculations.ema import LiveEma
 from config import log_with_color
 from core import Tick
+from tickers import TickerState, Position, Entry
 
+from .signals import Signal
 
 class EmaMeanReversion:
     """
@@ -53,6 +56,7 @@ class EmaMeanReversion:
 
         # Core params
         self.tick_size = params.tick_size
+        self.tick_value = params.tick_value
         self.precision = params.precision
         self.entry_distance_ticks = params.entry_distance_ticks
         self.max_distance_ticks = params.max_distance_ticks
@@ -83,7 +87,7 @@ class EmaMeanReversion:
 
     def check(
         self, tick: Tick, timestamp: Any = None, **kwargs: Any
-    ) -> Dict[str, Any] | None:
+    ) -> Signal | None:
         ema_val = kwargs.get("ema")
         atr_val = kwargs.get("atr")
 
@@ -136,19 +140,20 @@ class EmaMeanReversion:
             f"{atr_display}",
         )
 
-        return {
-            "timestamp": timestamp,
-            "direction": direction,
-            "entry": entry,
-            "take_profit": None,
-            "stop_loss": stop_loss,
-        }
+        return Signal(
+            timestamp=timestamp,
+            direction=direction,
+            entry=entry,
+            size=1,
+            profit_target=None,
+            stop_target=stop_loss,
+        )
 
     def reset(self) -> None:
         self._cooldown_until = None
 
-    def get_handler(self) -> Callable:
-        return _mean_reversion_ema_handler
+    def get_backtest_handler(self) -> Callable:
+        return mean_reversion_ema_handler
 
     def __repr__(self) -> str:
         return (
@@ -158,47 +163,58 @@ class EmaMeanReversion:
         )
 
 
-def _mean_reversion_ema_handler(
-    tick: Tick, logger: logging.Logger, state: Dict[str, Any]
+def mean_reversion_ema_handler(
+    tick: Tick, logger: logging.Logger, state: TickerState
 ) -> None:
-    strategy = state["strategy"]
+    strategy = state.strategy
 
     # Handler owns the EMA and ATR updates
     strategy.ema.on_tick(tick)
     strategy.atr.on_tick(tick)
 
-    if state["position"] is None:
-        state["position"] = strategy.check(
+    position = state.position
+
+    if position is None:
+        signal = strategy.check(
             tick, tick.t, ema=strategy.ema.value, atr=strategy.atr.value
         )
+        if signal is not None:
+            state.position = Position(
+                timestamp=tick.t,
+                direction=signal.direction,
+                entries=[Entry(price=signal.entry, size=signal.size)],
+                tick_size=strategy.tick_size,
+                tick_value=strategy.tick_value,
+                stop_loss=signal.stop_target,
+            )
         return
 
-    tick_size = state["tick_size"]
-    tick_value = state["tick_value"]
-    market_price = state["position"]["entry"]
+    tick_size = position.tick_size
+    tick_value = position.tick_value
     ema_now = strategy.ema.value
+    market_price = position.entries[0].price
 
-    if state["position"]["direction"] == "LONG":
+    if position.direction == "LONG":
         if tick.price >= ema_now:
             price_diff = tick.price - market_price
-        elif tick.price <= state["position"]["stop_loss"]:
-            price_diff = state["position"]["stop_loss"] - market_price
+        elif tick.price <= position.stop_loss:
+            price_diff = position.stop_loss - market_price
         else:
             return
     else:
         if tick.price <= ema_now:
             price_diff = market_price - tick.price
-        elif tick.price >= state["position"]["stop_loss"]:
-            price_diff = market_price - state["position"]["stop_loss"]
+        elif tick.price >= position.stop_loss:
+            price_diff = market_price - position.stop_loss
         else:
             return
 
     ticks_moved = price_diff / tick_size
     profit_loss = round(ticks_moved * tick_value, 2)
-    state["total_pnl"] += profit_loss
+    state.total_pnl += profit_loss
 
     ts_start = (
-        state["position"]["timestamp"]
+        position.timestamp
         .replace(microsecond=0)
         .astimezone(ZoneInfo("America/Chicago"))
     )
@@ -212,4 +228,4 @@ def _mean_reversion_ema_handler(
         "info",
     )
 
-    state["position"] = None
+    state.position = None

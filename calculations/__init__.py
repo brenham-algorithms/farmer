@@ -1,6 +1,7 @@
 from .atr import LiveAtr
 from .delta import DeltaEvent, DeltaWindow
 from .ema import LiveEma
+from .opening_range import LiveOpeningRange
 from .static import calculate_static_levels
 from .vwap import LiveVwap
 
@@ -11,4 +12,5 @@ __all__ = [
     "LiveEma",
     "LiveAtr",
     "LiveVwap",
+    "LiveOpeningRange",
 ]

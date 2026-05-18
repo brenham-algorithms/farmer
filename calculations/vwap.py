@@ -1,6 +1,6 @@
 import math
 from datetime import datetime, timedelta
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict, Any
 from zoneinfo import ZoneInfo
 
 from core import Tick
@@ -104,3 +104,43 @@ class LiveVwap:
         v = self.vwap
         sd = self.std_dev
         return (v - num_std * sd, v + num_std * sd)
+    
+    def seed_from_candles(self, candles: List[Dict[str, Any]]) -> None:
+        """
+        Pre-populate VWAP accumulators from historical candles for the
+        current session. Call this after construction and before live
+        ticks start flowing.
+
+        Uses typical price (H+L+C)/3 per candle weighted by volume,
+        which is the standard candle-level VWAP approximation. Not as
+        precise as tick-level, but far better than starting from zero
+        mid-session.
+
+        Only candles belonging to the current session (determined by
+        the last candle's timestamp) are included. Earlier sessions
+        are ignored.
+        """
+        if not candles:
+            return
+
+        # Determine current session from the last candle's timestamp
+        last_t = candles[-1]["t"]
+        if isinstance(last_t, str):
+            last_t = datetime.fromisoformat(last_t.replace("Z", "+00:00"))
+        current_session = self._session_key(last_t)
+
+        for candle in candles:
+            t = candle["t"]
+            if isinstance(t, str):
+                t = datetime.fromisoformat(t.replace("Z", "+00:00"))
+            if self._session_key(t) != current_session:
+                continue
+
+            typical_price = (candle["h"] + candle["l"] + candle["c"]) / 3.0
+            v = candle["v"]
+
+            self._sum_v += v
+            self._sum_pv += typical_price * v
+            self._sum_ppv += typical_price * typical_price * v
+
+        self._current_session_key = current_session

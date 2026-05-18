@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import AsyncIterator, Dict, Iterable, Iterator
 
 from api.models import TickerParams
-from core import Tick
+from core.types import Tick
 
 
 # Helper that prunes down to the mircosecond and returns a datetime object
