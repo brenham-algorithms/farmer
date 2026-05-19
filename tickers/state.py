@@ -18,6 +18,7 @@ class Position:
     entries: List[Entry]
     tick_size: float
     tick_value: float
+    take_profit: Optional[float] = None
     stop_loss: Optional[float] = None
 
 
@@ -28,4 +29,3 @@ class TickerState:
     tick_counter: int = 0
     position: Optional[Position] = None
     prev_price: Optional[float] = None
-        

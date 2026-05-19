@@ -86,7 +86,7 @@ class EmaMeanReversion:
         self._cooldown_until: Optional[datetime] = None
 
     def check(
-        self, tick: Tick, timestamp: Any = None, **kwargs: Any
+        self, tick: Tick, **kwargs: Any
     ) -> Signal | None:
         ema_val = kwargs.get("ema")
         atr_val = kwargs.get("atr")
@@ -141,7 +141,7 @@ class EmaMeanReversion:
         )
 
         return Signal(
-            timestamp=timestamp,
+            timestamp=tick.t,
             direction=direction,
             entry=entry,
             size=1,
@@ -176,7 +176,7 @@ def mean_reversion_ema_handler(
 
     if position is None:
         signal = strategy.check(
-            tick, tick.t, ema=strategy.ema.value, atr=strategy.atr.value
+            tick, ema=strategy.ema.value, atr=strategy.atr.value
         )
         if signal is not None:
             state.position = Position(

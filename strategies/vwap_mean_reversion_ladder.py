@@ -274,8 +274,8 @@ def vwap_mean_reversion_ladder_live_handler(
     vwap_now = strategy.vwap.vwap
     std_dev = strategy.vwap.std_dev
 
-    if state.tick_counter % 5000 == 0:
-        logger.info(f"Strategy: {state.strategy}")
+    if state.tick_counter == 1 or state.tick_counter % 10000 == 0:
+        logger.info(f"Live handler tick: price={tick.price} vwap={vwap_now:.2f} std_dev={std_dev:.2f}")
 
     # If price has crossed the vwap since the last trade, clear any directional pause
     prev_price = state.prev_price
@@ -305,7 +305,6 @@ def vwap_mean_reversion_ladder_live_handler(
                 stop_loss=signal.stop_target,
                 unwinding=False,
             )
-            logger.info(f"Entered {signal.direction} position at {signal.entry} with stop at {signal.stop_target}")
         return
     
     direction = position.direction
@@ -456,7 +455,6 @@ def vwap_mean_reversion_ladder_backtest_handler(
                 stop_loss=signal.stop_target,
                 unwinding=False,
             )
-            logger.info(f"Entered {signal.direction} position at {signal.entry} with stop at {signal.stop_target}")
         return
  
     direction = position.direction

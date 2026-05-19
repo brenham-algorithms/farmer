@@ -9,7 +9,9 @@ from api.models import StrategyParams
 from calculations import calculate_static_levels
 from config import log_with_color
 from core import Tick
+from tickers import TickerState, Position, Entry
 
+from .signals import Signal
 
 class StaticBounce:
     def __init__(
@@ -27,8 +29,9 @@ class StaticBounce:
         # Contains data for historical analysis
         self.candles = candles
 
-        # Tick size for the instrument being traded
+        # Tick size and value for the instrument being traded
         self.tick_size = params.tick_size
+        self.tick_value = params.tick_value
 
         # Bounce parameters
         self.proximity_threshold = params.proximity_threshold
@@ -68,8 +71,8 @@ class StaticBounce:
         self.last_level_traded: float | None = None
 
     def check(
-        self, tick: Tick, timestamp: Any = None, **kwargs: Any
-    ) -> Dict[str, Any] | None:
+        self, tick: Tick, **kwargs: Any
+    ) -> Signal | None:
         if not self.levels:
             return None
 
@@ -119,7 +122,7 @@ class StaticBounce:
         self.logger.info(
             f"{direction} signal from {level_key} at {entry}",
             extra={
-                "timestamp": timestamp,
+                "timestamp": tick.t,
                 "event": "signal_detected",
                 "direction": direction,
                 "entry": entry,
@@ -131,20 +134,29 @@ class StaticBounce:
 
         self.last_level_traded = level_key
 
-        return {
-            "timestamp": timestamp,
-            "direction": direction,
-            "entry": entry,
-            "take_profit": take_profit,
-            "stop_loss": stop_loss,
-            "level": level_key,
-        }
+        # return {
+        #     "timestamp": tick.t,
+        #     "direction": direction,
+        #     "entry": entry,
+        #     "take_profit": take_profit,
+        #     "stop_loss": stop_loss,
+        #     "level": level_key,
+        # }
+
+        return Signal(
+            timestamp=tick.t,
+            direction=direction,
+            entry=entry,
+            size=1,
+            profit_target=take_profit,
+            stop_target=stop_loss,
+        )
 
     def reset(self) -> None:
         self.last_level_traded = None
 
-    def get_handler(self) -> Callable:
-        return _static_bounce_handler
+    def get_backtest_handler(self) -> Callable:
+        return static_bounce_handler
 
     def __repr__(self) -> str:
         headers = ["Level", "Hits", "Score"]
@@ -183,45 +195,58 @@ class StaticBounce:
         )
 
 
-def _static_bounce_handler(
-    tick: Tick, logger: logging.Logger, state: Dict[str, Any]
+def static_bounce_handler(
+    tick: Tick, logger: logging.Logger, state: TickerState
 ) -> None:
     """
     Handler for processing ticks in a StaticBounce backtest.
     Updates the state with PnL when a position is closed.
     """
-    # Handle position
-    if state["position"] is None:
-        state["position"] = state["strategy"].check(tick, tick.t)
-        if state["position"] is None:
-            return
+    strategy = state.strategy
 
-    tick_size = state["tick_size"]
-    tick_value = state["tick_value"]
-    market_price = state["position"]["entry"]
+    # Handle position
+    position = state.position
+
+    if position is None:
+        signal = state.strategy.check(tick)
+        if signal is not None:
+            state.position = Position(
+                timestamp=tick.t,
+                direction=signal.direction,
+                entries=[Entry(price=signal.entry, size=signal.size)],
+                tick_size=strategy.tick_size,
+                tick_value=strategy.tick_value,
+                take_profit=signal.profit_target,
+                stop_loss=signal.stop_target,
+            )
+        return
+
+    tick_size = state.position.tick_size
+    tick_value = state.position.tick_value
+    market_price = state.position.entries[0].price
 
     price_diff = 0
-    if state["position"]["direction"] == "LONG":
-        if tick.price >= state["position"]["take_profit"]:
-            price_diff = state["position"]["take_profit"] - market_price
-        elif tick.price <= state["position"]["stop_loss"]:
-            price_diff = state["position"]["stop_loss"] - market_price
+    if state.position.direction == "LONG":
+        if tick.price >= state.position.take_profit:
+            price_diff = state.position.take_profit - market_price
+        elif tick.price <= state.position.stop_loss:
+            price_diff = state.position.stop_loss - market_price
         else:
             return
     else:
-        if tick.price <= state["position"]["take_profit"]:
-            price_diff = market_price - state["position"]["take_profit"]
-        elif tick.price >= state["position"]["stop_loss"]:
-            price_diff = market_price - state["position"]["stop_loss"]
+        if tick.price <= state.position.take_profit:
+            price_diff = market_price - state.position.take_profit
+        elif tick.price >= state.position.stop_loss:
+            price_diff = market_price - state.position.stop_loss
         else:
             return
 
     ticks_moved = price_diff / tick_size
     profit_loss = round(ticks_moved * tick_value, 2)
-    state["total_pnl"] += profit_loss
+    state.total_pnl += profit_loss
 
     ts_start = (
-        state["position"]["timestamp"]
+        state.position.timestamp
         .replace(microsecond=0)
         .astimezone(ZoneInfo("America/Chicago"))
     )
@@ -235,4 +260,4 @@ def _static_bounce_handler(
     )
 
     # Reset position
-    state["position"] = None
+    state.position = None

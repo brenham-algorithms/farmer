@@ -10,22 +10,18 @@ from .models import (
     QueryConfig,
     FarmerConfig,
     StaticBounceParams,
-    StaticBounceWithDeltaParams,
     StrategyConfig,
     StrategyParams,
     TickerParams,
     VwapMeanReversionParams,
     VwapMeanReversionLadderParams,
-    OpeningRangeBreakoutParams,
 )
 
 __all__ = [
     "StaticBounceParams",
-    "StaticBounceWithDeltaParams",
     "EmaMeanReversionParams",
     "VwapMeanReversionParams",
     "VwapMeanReversionLadderParams",
-    "OpeningRangeBreakoutParams",
     "StrategyParams",
     "CsvDataSource",
     "ProjectXDataSource",

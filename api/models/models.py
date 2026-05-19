@@ -18,26 +18,6 @@ class StaticBounceParams(BaseModel):
     precision: int = 2
 
 
-class StaticBounceWithDeltaParams(BaseModel):
-    tick_size: float
-    tick_value: float
-    proximity_threshold: int
-    reward_ticks: int
-    risk_ticks: int
-    tick_tolerance: int
-    kind: Literal["static_bounce_with_delta"] = "static_bounce_with_delta"
-    min_separation: int = 10
-    top_n: int = 10
-    decay_half_life_days: float = 15.0
-    precision: int = 2
-    delta_window_seconds: float = 300.0
-    attempt_seconds: int = 30
-    delta_ratio_threshold: float = 0.20
-    min_response_ticks: int = 3
-    max_penetration_ticks: int = 4
-    cooldown_seconds: int = 120
-
-
 class EmaMeanReversionParams(BaseModel):
     tick_size: float
     tick_value: float
@@ -115,50 +95,11 @@ class VwapMeanReversionLadderParams(BaseModel):
     max_atr: Optional[float] = None
 
 
-class OpeningRangeBreakoutParams(BaseModel):
-    tick_size: float
-    tick_value: float
-    kind: Literal["opening_range_breakout"] = "opening_range_breakout"
-    precision: int = 2
-    num_contracts: int = 2
- 
-    # Session
-    session_reset_hour: int = 17
-    session_reset_minute: int = 0
- 
-    # Opening range window
-    or_start_hour: int = 8
-    or_start_minute: int = 30
-    or_duration_minutes: int = 15
- 
-    # Range size filter (in ticks)
-    min_range_ticks: int = 12
-    max_range_ticks: int = 80
- 
-    # TP multiplier (1.0 = 1x range size from entry)
-    tp_range_multiplier: float = 1.0
- 
-    # Time exit
-    exit_hour: int = 15
-    exit_minute: int = 0
- 
-    # Confirmation (set attempt_seconds=0 to disable)
-    attempt_seconds: int = 30
-    delta_ratio_threshold: float = 0.15
-    min_response_ticks: int = 2
-    min_attempt_volume: int = 50
-    min_absorbed_volume: int = 0
-    absorption_ticks: int = 2
-    cooldown_seconds: int = 300
-
-
 StrategyParams = Union[
     StaticBounceParams,
-    StaticBounceWithDeltaParams,
     EmaMeanReversionParams,
     VwapMeanReversionParams,
     VwapMeanReversionLadderParams,
-    OpeningRangeBreakoutParams,
 ]
 
 

@@ -1,11 +1,11 @@
 import argparse
 
-from config import FarmSettings, init_strucutred_logger
+from config import FarmSettings, init_backtest_logger
 from farm import Farmer
 
 
 def main(args):
-    logger = init_strucutred_logger()
+    logger = init_backtest_logger()
 
     settings = FarmSettings.build(args)
 
