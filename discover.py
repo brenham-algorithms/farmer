@@ -6,7 +6,7 @@ from strategies import build_strategy
 
 
 def main(args) -> None:
-    logger = init_backtest_logger()
+    logger = init_backtest_logger(args.level)
 
     settings = DiscoverSettings.build(args)
 

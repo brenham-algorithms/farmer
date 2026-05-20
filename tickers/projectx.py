@@ -104,11 +104,6 @@ class ProjectXTicker:
         )
     
     def on_trade(self, args):
-        self.logger.debug(
-            "received market trade",
-            extra={"event": "market_hub_trade", "value": args},
-        )
-
         contract_id, trades = args
         for t in trades:
             # Ignore non-standard trades

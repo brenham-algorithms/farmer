@@ -5,25 +5,25 @@ from colorama import Style, init
 from pythonjsonlogger import jsonlogger
 
 
-def init_null_logger() -> logging.Logger:
+def init_null_logger(level: str) -> logging.Logger:
     """
     Logger that won't spam stdout during tests.
     """
     logger = logging.getLogger("static_bounce_test")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(getattr(logging, level.upper(), logging.INFO))
     logger.handlers.clear()
     logger.addHandler(logging.NullHandler())
     return logger
 
 
-def init_backtest_logger():
+def init_backtest_logger(level: str) -> logging.Logger:
     """
     Logger for backtests with timestamps and colored output.
     """
     init(autoreset=True)
 
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(getattr(logging, level.upper(), logging.INFO))
 
     # If this logger already has handlers such as pytest param runs, clear them
     logger.handlers.clear()
@@ -40,9 +40,9 @@ def init_backtest_logger():
     return logger
 
 
-def init_strucutred_logger():
+def init_strucutred_logger(level: str) -> logging.Logger:
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(getattr(logging, level.upper(), logging.INFO))
     handler = logging.StreamHandler()
     formatter = jsonlogger.JsonFormatter(
         "%(asctime)s %(levelname)s %(name)s %(message)s"

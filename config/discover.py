@@ -27,3 +27,7 @@ class DiscoverSettings(BaseModel):
         parser.add_argument(
             "--query", type=str, help="The query name for which to run discovery"
         )
+
+        parser.add_argument(
+            "--level", type=str, default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+        )

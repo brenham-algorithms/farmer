@@ -27,3 +27,7 @@ class FarmSettings(BaseModel):
         parser.add_argument(
             "--name", type=str, help="The farmer name to run in production"
         )
+
+        parser.add_argument(
+            "--level", type=str, default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+        )

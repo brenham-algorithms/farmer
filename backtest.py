@@ -7,9 +7,9 @@ from config import BacktestSettings, init_backtest_logger
 
 
 async def main(args) -> None:
-    settings = BacktestSettings.build(args)
+    logger = init_backtest_logger(args.level)
 
-    logger = init_backtest_logger()
+    settings = BacktestSettings.build(args)
 
     # Look up the specified backtest in settings and raise an error if not present
     backtest_conf = None

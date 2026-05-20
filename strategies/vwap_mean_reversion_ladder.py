@@ -275,7 +275,7 @@ def vwap_mean_reversion_ladder_live_handler(
     std_dev = strategy.vwap.std_dev
 
     if state.tick_counter == 1 or state.tick_counter % 10000 == 0:
-        logger.info(f"Live handler tick: price={tick.price} vwap={vwap_now:.2f} std_dev={std_dev:.2f}")
+        logger.debug(f"Live handler tick: price={tick.price} vwap={vwap_now:.2f} std_dev={std_dev:.2f}")
 
     # If price has crossed the vwap since the last trade, clear any directional pause
     prev_price = state.prev_price

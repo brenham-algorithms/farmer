@@ -25,3 +25,7 @@ class BacktestSettings(BaseModel):
         )
 
         parser.add_argument("--name", type=str, help="The name of the backtest to run")
+
+        parser.add_argument(
+            "--level", type=str, default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+        )

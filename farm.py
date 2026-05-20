@@ -5,7 +5,7 @@ from farm import Farmer
 
 
 def main(args):
-    logger = init_backtest_logger()
+    logger = init_backtest_logger(args.level)
 
     settings = FarmSettings.build(args)
 
