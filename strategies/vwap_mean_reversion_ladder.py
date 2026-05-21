@@ -346,7 +346,10 @@ def vwap_mean_reversion_ladder_live_handler(
             return
 
     # Scale in at the next ladder level if conditions are met
-    if not position.unwinding and num < strategy.size_std_1 + strategy.size_std_2 + strategy.size_std_3:
+    if (
+        not position.unwinding
+        and num < strategy.size_std_1 + strategy.size_std_2 + strategy.size_std_3
+    ):
         add_signal = strategy.check_add(
             tick, num, direction, vwap=vwap_now, std_dev=std_dev
         )
@@ -498,7 +501,10 @@ def vwap_mean_reversion_ladder_backtest_handler(
             return
 
     # Scale in at the next ladder level if conditions are met
-    if not position.unwinding and num < strategy.size_std_1 + strategy.size_std_2 + strategy.size_std_3:
+    if (
+        not position.unwinding
+        and num < strategy.size_std_1 + strategy.size_std_2 + strategy.size_std_3
+    ):
         add_signal = strategy.check_add(
             tick, num, direction, vwap=vwap_now, std_dev=std_dev
         )
