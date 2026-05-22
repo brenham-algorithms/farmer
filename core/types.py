@@ -1,8 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional
-
-from .protocols import Strategy
+from typing import List
 
 
 @dataclass(frozen=True)

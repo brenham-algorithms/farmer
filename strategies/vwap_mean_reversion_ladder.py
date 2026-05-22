@@ -18,14 +18,14 @@ class VwapMeanReversionLadder:
     VWAP mean reversion with laddered entries and tiered take-profit.
 
     Entry ladder (all on the same side of VWAP):
-      - 1 contract  at entry_std_1 (default 2.0 sigma)
-      - +1 contract at entry_std_2 (default 2.5 sigma) -> total 2
-      - +2 contracts at entry_std_3 (default 3.0 sigma) -> total 4
+      - size_std_1 contracts  at entry_std_1 (default 2.0 sigma)
+      - +size_std_2 contracts at entry_std_2 (default 2.5 sigma) -> total size_std_1 + size_std_2
+      - +size_std_3 contracts at entry_std_3 (default 3.0 sigma) -> total size_std_1 + size_std_2 + size_std_3
 
     Take-profit ladder (as price reverts toward VWAP):
-      - 4 contracts: cut 2 when price crosses back inside tp_std_4 band
-      - 2 contracts: cut 1 when price crosses back inside tp_std_2 band
-      - 1 contract:  close when price crosses VWAP
+      - size_std_3 contracts: cut size_std_3 when price crosses back inside tp_std_3 band
+      - size_std_2 contracts: cut size_std_2 when price crosses back inside tp_std_2 band
+      - size_std_1 contracts:  close when price crosses VWAP
 
     Hard stop: risk_ticks from first entry, closes all contracts.
     """
@@ -46,26 +46,26 @@ class VwapMeanReversionLadder:
         self.min_session_volume = params.min_session_volume
         self.cooldown_seconds = params.cooldown_seconds
 
-        # Entry bands
+        # Entry bands and sizes
         self.entry_std_1 = params.entry_std_1
+        self.size_std_1 = params.size_std_1
         self.entry_std_2 = params.entry_std_2
+        self.size_std_2 = params.size_std_2
         self.entry_std_3 = params.entry_std_3
+        self.size_std_3 = params.size_std_3
         self.max_std_dev = params.max_std_dev
         self.min_std_dev_value = params.min_std_dev_value
 
         # TP bands
-        self.tp_std_4 = params.tp_std_4
+        self.tp_std_3 = params.tp_std_3
         self.tp_std_2 = params.tp_std_2
-
-        # Seeding behavior for vwap
-        self.seed_vwap = params.seed_vwap
 
         # Vwap
         self.vwap = LiveVwap(
             session_reset_hour=params.session_reset_hour,
             session_reset_minute=params.session_reset_minute,
         )
-        if self.seed_vwap:
+        if params.seed_vwap:
             self.vwap.seed_from_candles(candles)
 
         # State
@@ -118,12 +118,12 @@ class VwapMeanReversionLadder:
         if vwap_val is None or std_dev is None or std_dev <= 0:
             return None
 
-        if num_contracts == 1:
+        if num_contracts == self.size_std_1:
             target_std = self.entry_std_2
-            contracts_to_add = 1
-        elif num_contracts == 2:
+            contracts_to_add = self.size_std_2
+        elif num_contracts == self.size_std_1 + self.size_std_2:
             target_std = self.entry_std_3
-            contracts_to_add = 2
+            contracts_to_add = self.size_std_3
         else:
             return None  # fully scaled
 
@@ -170,7 +170,7 @@ class VwapMeanReversionLadder:
             timestamp=tick.t,
             direction=direction,
             entry=entry,
-            size=1,
+            size=self.size_std_1,
             stop_target=stop_loss,
         )
 
@@ -287,28 +287,28 @@ def vwap_mean_reversion_ladder_live_handler(
         contracts_to_cut = 0
         tp_label = ""
 
-        if num == 4:
+        if num == strategy.size_std_3 + strategy.size_std_2 + strategy.size_std_1:
             if direction == "LONG":
-                tp_hit = tick.price >= vwap_now - strategy.tp_std_4 * std_dev
+                tp_hit = tick.price >= vwap_now - strategy.tp_std_3 * std_dev
             else:
-                tp_hit = tick.price <= vwap_now + strategy.tp_std_4 * std_dev
-            contracts_to_cut = 2
-            tp_label = f"{strategy.tp_std_4}std"
+                tp_hit = tick.price <= vwap_now + strategy.tp_std_3 * std_dev
+            contracts_to_cut = strategy.size_std_3
+            tp_label = f"{strategy.tp_std_3}std"
 
-        elif num == 2:
+        elif num == strategy.size_std_2 + strategy.size_std_1:
             if direction == "LONG":
                 tp_hit = tick.price >= vwap_now - strategy.tp_std_2 * std_dev
             else:
                 tp_hit = tick.price <= vwap_now + strategy.tp_std_2 * std_dev
-            contracts_to_cut = 1
+            contracts_to_cut = strategy.size_std_2
             tp_label = f"{strategy.tp_std_2}std"
 
-        elif num == 1:
+        elif num == strategy.size_std_1:
             if direction == "LONG":
                 tp_hit = tick.price >= vwap_now
             else:
                 tp_hit = tick.price <= vwap_now
-            contracts_to_cut = 1
+            contracts_to_cut = strategy.size_std_1
             tp_label = "VWAP"
 
         if tp_hit and contracts_to_cut > 0:
@@ -346,7 +346,10 @@ def vwap_mean_reversion_ladder_live_handler(
             return
 
     # Scale in at the next ladder level if conditions are met
-    if not position.unwinding and num < 4:
+    if (
+        not position.unwinding
+        and num < strategy.size_std_1 + strategy.size_std_2 + strategy.size_std_3
+    ):
         add_signal = strategy.check_add(
             tick, num, direction, vwap=vwap_now, std_dev=std_dev
         )
@@ -439,28 +442,28 @@ def vwap_mean_reversion_ladder_backtest_handler(
         contracts_to_cut = 0
         tp_label = ""
 
-        if num == 4:
+        if num == strategy.size_std_3 + strategy.size_std_2 + strategy.size_std_1:
             if direction == "LONG":
-                tp_hit = tick.price >= vwap_now - strategy.tp_std_4 * std_dev
+                tp_hit = tick.price >= vwap_now - strategy.tp_std_3 * std_dev
             else:
-                tp_hit = tick.price <= vwap_now + strategy.tp_std_4 * std_dev
-            contracts_to_cut = 2
-            tp_label = f"{strategy.tp_std_4}std"
+                tp_hit = tick.price <= vwap_now + strategy.tp_std_3 * std_dev
+            contracts_to_cut = strategy.size_std_3
+            tp_label = f"{strategy.tp_std_3}std"
 
-        elif num == 2:
+        elif num == strategy.size_std_2 + strategy.size_std_1:
             if direction == "LONG":
                 tp_hit = tick.price >= vwap_now - strategy.tp_std_2 * std_dev
             else:
                 tp_hit = tick.price <= vwap_now + strategy.tp_std_2 * std_dev
-            contracts_to_cut = 1
+            contracts_to_cut = strategy.size_std_2
             tp_label = f"{strategy.tp_std_2}std"
 
-        elif num == 1:
+        elif num == strategy.size_std_1:
             if direction == "LONG":
                 tp_hit = tick.price >= vwap_now
             else:
                 tp_hit = tick.price <= vwap_now
-            contracts_to_cut = 1
+            contracts_to_cut = strategy.size_std_1
             tp_label = "VWAP"
 
         if tp_hit and contracts_to_cut > 0:
@@ -498,7 +501,10 @@ def vwap_mean_reversion_ladder_backtest_handler(
             return
 
     # Scale in at the next ladder level if conditions are met
-    if not position.unwinding and num < 4:
+    if (
+        not position.unwinding
+        and num < strategy.size_std_1 + strategy.size_std_2 + strategy.size_std_3
+    ):
         add_signal = strategy.check_add(
             tick, num, direction, vwap=vwap_now, std_dev=std_dev
         )

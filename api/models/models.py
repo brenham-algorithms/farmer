@@ -69,16 +69,19 @@ class VwapMeanReversionLadderParams(BaseModel):
     session_reset_minute: int = 0
 
     # Entry ladder bands (in standard deviations from VWAP)
-    entry_std_1: float = 2.0  # 1 contract
-    entry_std_2: float = 2.5  # +1 contract (total 2)
-    entry_std_3: float = 3.0  # +2 contracts (total 4)
-    max_std_dev: float = 4.0  # skip entries beyond this
+    entry_std_1: float = 2.0
+    size_std_1: int = 1
+    entry_std_2: float = 2.5
+    size_std_2: int = 1
+    entry_std_3: float = 3.0
+    size_std_3: int = 2
+    max_std_dev: float = 4.0
     min_std_dev_value: Optional[float] = None
 
     # TP ladder bands (price must cross INSIDE these bands toward VWAP)
-    # 1 contract closes at VWAP (no param needed)
-    tp_std_4: float = 2.0  # cut 2 at this band (when holding 4)
-    tp_std_2: float = 1.0  # cut 1 at this band (when holding 2)
+    # After hitting tp_std_2, any contracts that remain close at VWAP
+    tp_std_3: float = 2.0  # cut size_std_3 at this band
+    tp_std_2: float = 1.0  # cut size_std_2 at this band
 
     # Risk
     risk_ticks: int = 80  # hard stop from first entry, all contracts
