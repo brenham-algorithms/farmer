@@ -4,10 +4,10 @@ from config import FarmSettings, init_backtest_logger
 from farm import Farmer
 
 
-def main(args):
+def main(args, overrides=None) -> None:
     logger = init_backtest_logger(args.level)
 
-    settings = FarmSettings.build(args)
+    settings = FarmSettings.build(args, overrides=overrides)
 
     # Look up the specified farmer in settings and raise an error if not present
     strategy_conf = None
@@ -28,6 +28,6 @@ if __name__ == "__main__":
         description="Modular quant trading bot",
     )
     FarmSettings.set_args(parser)
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
-    main(args)
+    main(args, unknown)

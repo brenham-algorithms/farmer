@@ -5,10 +5,10 @@ from config import DiscoverSettings, init_backtest_logger
 from strategies import build_strategy
 
 
-def main(args) -> None:
+def main(args, overrides=None) -> None:
     logger = init_backtest_logger(args.level)
 
-    settings = DiscoverSettings.build(args)
+    settings = DiscoverSettings.build(args, overrides=overrides)
 
     # Look up the specified strategy in settings and raise an error if not present
     strategy_conf = None
@@ -30,6 +30,6 @@ if __name__ == "__main__":
         description="Tunable support and resistance level finder"
     )
     DiscoverSettings.set_args(parser)
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
-    main(args)
+    main(args, unknown)
