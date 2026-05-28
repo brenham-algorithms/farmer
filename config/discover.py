@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from api.models import QueryConfig
 from config.overrides import apply_overrides
 
+
 class DiscoverSettings(BaseModel):
     queries: List[QueryConfig]
 
@@ -22,8 +23,7 @@ class DiscoverSettings(BaseModel):
                     apply_overrides(query, overrides)
 
         return cls(**data)
-    
-    
+
     @classmethod
     def set_args(cls, parser):
         parser.add_argument(

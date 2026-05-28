@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from api.models import FarmerConfig
 from config.overrides import apply_overrides
 
+
 class FarmSettings(BaseModel):
     farmers: List[FarmerConfig]
 

@@ -7,7 +7,6 @@ from .static_level_bounce import StaticLevelBounce
 from .vwap_mean_reversion import VwapMeanReversion
 from .vwap_mean_reversion_ladder import VwapMeanReversionLadder
 
-
 __all__ = [
     "Dummy",
     "EmaMeanReversion",

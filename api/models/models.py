@@ -101,44 +101,44 @@ class OrbParams(BaseModel):
     tick_value: float
     kind: Literal["orb"] = "orb"
     precision: int = 2
- 
+
     # Session
     session_reset_hour: int = 17
     session_reset_minute: int = 0
- 
+
     # Opening range window
     or_start_hour: int = 8
     or_start_minute: int = 30
     or_duration_minutes: int = 15
- 
+
     # Range filters (in ticks)
     min_range_ticks: int = 12
     max_range_ticks: int = 80
- 
+
     # Breakout: how far past OR boundary price must go
     breakout_ticks: int = 4
- 
+
     # Reversion: how close to OR boundary price must return
     reversion_ticks: int = 2
- 
+
     # Max penetration: how far inside the range before attempt is cancelled
     max_penetration_ticks: int = 4
- 
+
     # Position sizing
     num_contracts: int = 2
-    tp_contracts: int = 1 # how many to close at TP; remainder = runners
- 
+    tp_contracts: int = 1  # how many to close at TP; remainder = runners
+
     # Risk/reward as multipliers of OR range size
     tp_range_multiplier: float = 1.0
     risk_range_multiplier: float = 1.0
- 
+
     # Runner trailing stop (in ticks)
     trail_ticks: int = 20
- 
+
     # Time exit
     exit_hour: int = 15
     exit_minute: int = 0
- 
+
     # Confirmation
     attempt_seconds: int = 30
     delta_ratio_threshold: float = 0.15
@@ -154,29 +154,31 @@ class StaticLevelBounceParams(BaseModel):
     tick_value: float
     kind: Literal["static_level_bounce"] = "static_level_bounce"
     precision: int = 2
- 
+
     # The level
     level: float
     support: bool = True
     resistance: bool = True
- 
+
     # Zone definition (ticks above and below the level)
     ticks_above: int = 4
     ticks_below: int = 4
- 
+
     # Risk/reward (in ticks)
     reward_ticks: int = 20
     risk_ticks: int = 10
- 
+
     # Position sizing
     num_contracts: int = 1
- 
+
     # Confirmation
     attempt_seconds: int = 30
     delta_ratio_threshold: float = 0.15
     min_response_ticks: int = 2
     min_attempt_volume: int = 50
-    min_absorption_ratio: float = 0.0 # 0 = disabled; e.g. 0.20 = 20% of volume must be absorbed
+    min_absorption_ratio: float = (
+        0.0  # 0 = disabled; e.g. 0.20 = 20% of volume must be absorbed
+    )
     absorption_ticks: int = 2
     cooldown_seconds: int = 300
 

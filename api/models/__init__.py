@@ -7,16 +7,16 @@ from .models import (
     DataSource,
     EmaMeanReversionParams,
     FarmerConfig,
+    OrbParams,
     ProjectXDataSource,
     QueryConfig,
     StaticBounceParams,
+    StaticLevelBounceParams,
     StrategyConfig,
     StrategyParams,
     TickerParams,
     VwapMeanReversionLadderParams,
     VwapMeanReversionParams,
-    OrbParams,
-    StaticLevelBounceParams,
 )
 
 __all__ = [

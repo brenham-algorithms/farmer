@@ -19,7 +19,7 @@ async def main(args) -> None:
         configs = [bt for bt in settings.backtests if bt.name == args.name]
         if not configs:
             raise ValueError(f"Backtest '{args.name}' not found in configuration")
-    
+
     for backtest_conf in configs:
         response = await run_backtest_async(backtest_conf, logger)
         print(json.dumps(response.model_dump(), indent=2))
