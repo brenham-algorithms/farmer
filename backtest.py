@@ -11,20 +11,18 @@ async def main(args) -> None:
 
     settings = BacktestSettings.build(args)
 
-    # Look up the specified backtest in settings and raise an error if not present
-    backtest_conf = None
-    for bt in settings.backtests:
-        if bt.name == args.name:
-            backtest_conf = bt
-            break
-    if backtest_conf is None:
-        raise ValueError(f"Backtest '{args.name}' not found in configuration")
-
-    response = await run_backtest_async(backtest_conf, logger)
-
-    # Print serialized response to stdout for consumption by caller.
-    # Note this same response can be used in upcoming api implementation.
-    print(json.dumps(response.model_dump(), indent=2))
+    if args.name == "all":
+        # Run all configured backtests in settings if specified
+        configs = settings.backtests
+    else:
+        # Otherwise look up the specified backtest in settings and raise an error if not present
+        configs = [bt for bt in settings.backtests if bt.name == args.name]
+        if not configs:
+            raise ValueError(f"Backtest '{args.name}' not found in configuration")
+    
+    for backtest_conf in configs:
+        response = await run_backtest_async(backtest_conf, logger)
+        print(json.dumps(response.model_dump(), indent=2))
 
 
 if __name__ == "__main__":

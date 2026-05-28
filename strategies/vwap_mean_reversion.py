@@ -58,6 +58,11 @@ class BandAttempt:
         if self.sum_volume <= 0:
             return 0.0
         return self.sum_delta / self.sum_volume
+    
+    def absorption_ratio(self) -> float:
+        if self.sum_volume <= 0:
+            return 0.0
+        return self.absorbed_volume / self.sum_volume
 
     def is_expired(self, now: datetime) -> bool:
         return now >= self.expire_t

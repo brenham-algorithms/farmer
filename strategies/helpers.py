@@ -8,6 +8,8 @@ from .ema_mean_reversion import EmaMeanReversion
 from .static_bounce import StaticBounce
 from .vwap_mean_reversion import VwapMeanReversion
 from .vwap_mean_reversion_ladder import VwapMeanReversionLadder
+from .opening_range_breakout import OpeningRangeBreakout
+from .static_level_bounce import StaticLevelBounce
 
 
 def build_strategy(
@@ -21,5 +23,9 @@ def build_strategy(
         return VwapMeanReversion(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "vwap_mean_reversion_ladder":
         return VwapMeanReversionLadder(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "orb":
+        return OpeningRangeBreakout(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "static_level_bounce":
+        return StaticLevelBounce(logger, candles, config.strategy_params)
     else:
         raise ValueError(f"Unsupported strategy kind: {config.strategy_params.kind}")
