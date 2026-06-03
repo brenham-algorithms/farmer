@@ -99,7 +99,7 @@ class StaticLevelBounce:
                 self._entry_direction = None
 
             self._last_zone_state = current_state
-            
+
             # If an attempt is still active, keep updating it
             if self._attempt is not None:
                 if self._attempt.is_expired(tick.t):
