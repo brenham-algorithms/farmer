@@ -92,22 +92,34 @@ class StaticLevelBounce:
         now = tick.t
         delta = tick.delta()
 
-        # --- Price left the zone: reset ---
         if current_state != "IN_ZONE":
             if self._entry_direction is not None:
+                # Clear direction if we are not in the zone anymore.
+                # But don't clear _attempt; let it run until expiry or confirmation.
                 self._entry_direction = None
-                self._attempt = None
+
             self._last_zone_state = current_state
+            
+            # If an attempt is still active, keep updating it
+            if self._attempt is not None:
+                if self._attempt.is_expired(tick.t):
+                    self._attempt = None
+                else:
+                    self._attempt.on_tick(tick.t, tick.price, tick.delta(), tick.size)
+                    if self._confirmed(self._attempt):
+                        signal = self._build_entry(self._attempt, tick)
+                        self._attempt = None
+                        return signal
             return None
 
-        # --- We're in the zone ---
+        # At this point, price should be in the zone
 
         # Cooldown check
         if self._cooldown_until is not None and now < self._cooldown_until:
             self._last_zone_state = current_state
             return None
 
-        # Detect zone entry (first tick in zone, determine direction)
+        # Detect zone entry and set direction for potential attempt
         if self._entry_direction is None:
             if self._last_zone_state == "ABOVE" and self.support:
                 self._entry_direction = "LONG"
@@ -118,7 +130,7 @@ class StaticLevelBounce:
                 self._last_zone_state = current_state
                 return None
 
-        # Active attempt: update and check confirmation
+        # If we are in an active attempt, update and check confirmation
         if self._attempt is not None:
             if self._attempt.is_expired(now):
                 self.logger.debug("Level attempt expired, restarting")
@@ -134,7 +146,7 @@ class StaticLevelBounce:
                 self._last_zone_state = current_state
                 return None
 
-        # No active attempt: start a new one
+        # If we get to this point and we are not in an active attempt, start a new one
         self._attempt = BandAttempt(
             direction=self._entry_direction,
             start_t=now,
@@ -157,11 +169,11 @@ class StaticLevelBounce:
         return None
 
     def _confirmed(self, attempt: BandAttempt) -> bool:
-        # 1. Minimum volume
+        # Minimum attempt volume filter
         if attempt.sum_volume < self.min_attempt_volume:
             return False
 
-        # 2. Delta ratio in expected direction
+        # Delta ratio in expected direction filter
         dr = attempt.delta_ratio()
         if attempt.direction == "LONG":
             if dr < self.delta_ratio_threshold:
@@ -170,7 +182,7 @@ class StaticLevelBounce:
             if dr > -self.delta_ratio_threshold:
                 return False
 
-        # 3. Price response
+        # Price response filter
         min_resp = self.min_response_ticks * self.tick_size
         if attempt.direction == "LONG":
             if (attempt.last_price - attempt.min_price) < min_resp:
@@ -179,7 +191,7 @@ class StaticLevelBounce:
             if (attempt.max_price - attempt.last_price) < min_resp:
                 return False
 
-        # 4. Absorption ratio
+        # Absorption ratio filter
         if self.min_absorption_ratio > 0:
             if attempt.absorption_ratio() < self.min_absorption_ratio:
                 return False

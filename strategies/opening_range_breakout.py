@@ -375,7 +375,7 @@ def orb_handler(tick: Tick, logger: logging.Logger, state: TickerState) -> None:
         state.position = None
         return
 
-    # No position: check for entry
+    # If we are not in a position, check for entry signal
     if position is None:
         or_ = strategy.opening_range
         signal = strategy.check(
@@ -399,9 +399,9 @@ def orb_handler(tick: Tick, logger: logging.Logger, state: TickerState) -> None:
 
     direction = position.direction
 
-    # --- Not yet unwinding: check SL and TP ---
+    # If the position is not yet unwinding, check for stop loss or take profit hits
     if not position.unwinding:
-        # Stop loss: close all
+        # If we hit our hard stop, close everything and log
         sl_hit = False
         if direction == "LONG" and tick.price <= position.stop_loss:
             sl_hit = True
@@ -429,7 +429,7 @@ def orb_handler(tick: Tick, logger: logging.Logger, state: TickerState) -> None:
             state.position = None
             return
 
-        # Take profit: cut tp_contracts
+        # If we hit our profit target, cut tp_contracts
         tp_hit = False
         if direction == "LONG" and tick.price >= position.take_profit:
             tp_hit = True
@@ -462,7 +462,7 @@ def orb_handler(tick: Tick, logger: logging.Logger, state: TickerState) -> None:
                 state.position = None
                 return
 
-            # Partial close: cut tp_contracts, activate runner
+            # If tp_contracts < total, cut tp_contracts and activate runner
             pnl = position.cut(tp_contracts, position.take_profit)
             state.total_pnl += pnl
             position.unwinding = True
@@ -492,7 +492,7 @@ def orb_handler(tick: Tick, logger: logging.Logger, state: TickerState) -> None:
             )
             return
 
-    # --- Unwinding: trailing stop on runner ---
+    # If we are in an unwinding state, handle trailing stop
     if position.unwinding:
         trail_dist = strategy.trail_ticks * strategy.tick_size
 

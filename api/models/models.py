@@ -183,6 +183,46 @@ class StaticLevelBounceParams(BaseModel):
     cooldown_seconds: int = 300
 
 
+class StaticLevelBounceConfirmedExitParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["static_level_bounce_confirmed_exit"] = "static_level_bounce_confirmed_exit"
+    precision: int = 2
+ 
+    # The level
+    level: float
+    support: bool = True
+    resistance: bool = True
+ 
+    # Zone definition
+    ticks_above: int = 4
+    ticks_below: int = 4
+ 
+    # Hard stop safety net (in ticks from entry)
+    risk_ticks: int = 40
+ 
+    # Position sizing
+    num_contracts: int = 1
+ 
+    # Entry confirmation
+    entry_attempt_seconds: int = 30
+    entry_delta_ratio_threshold: float = 0.15
+    entry_min_response_ticks: int = 2
+    entry_min_attempt_volume: int = 50
+    entry_min_absorption_ratio: float = 0.0
+    entry_absorption_ticks: int = 2
+ 
+    # Exit confirmation
+    exit_attempt_seconds: int = 30
+    exit_delta_ratio_threshold: float = 0.15
+    exit_min_response_ticks: int = 2
+    exit_min_attempt_volume: int = 50
+    exit_min_absorption_ratio: float = 0.0
+    exit_absorption_ticks: int = 2
+ 
+    cooldown_seconds: int = 300
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -190,6 +230,7 @@ StrategyParams = Union[
     VwapMeanReversionLadderParams,
     OrbParams,
     StaticLevelBounceParams,
+    StaticLevelBounceConfirmedExitParams,
 ]
 
 
