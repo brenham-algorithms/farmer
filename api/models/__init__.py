@@ -5,6 +5,7 @@ from .models import (
     BacktestResult,
     CsvDataSource,
     DataSource,
+    EmaMeanReversionConfirmedParams,
     EmaMeanReversionParams,
     FarmerConfig,
     OrbParams,
@@ -23,6 +24,7 @@ from .models import (
 __all__ = [
     "StaticBounceParams",
     "EmaMeanReversionParams",
+    "EmaMeanReversionConfirmedParams",
     "VwapMeanReversionParams",
     "VwapMeanReversionLadderParams",
     "OrbParams",

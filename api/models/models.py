@@ -225,6 +225,38 @@ class StaticLevelBounceConfirmedExitParams(BaseModel):
     cooldown_seconds: int = 300
 
 
+class EmaMeanReversionConfirmedParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["ema_mean_reversion_confirmed"] = "ema_mean_reversion_confirmed"
+    precision: int = 4
+
+    # EMA
+    ema_period: int = 20
+    candle_length: int = 5
+
+    # ATR; optional volatility filter
+    atr_period: int = 56
+    max_atr: Optional[float] = None
+
+    # Entry distance
+    entry_distance_ticks: int = 50
+    max_distance_ticks: Optional[int] = None
+
+    # Hard stop safety net
+    risk_ticks: int = 500
+
+    # Entry confirmation
+    entry_attempt_seconds: int = 30
+    entry_delta_ratio_threshold: float = -0.15
+    entry_min_response_ticks: int = 4
+    entry_min_attempt_volume: int = 50
+    entry_min_absorption_ratio: float = 0.40
+    entry_absorption_ticks: int = 4
+
+    cooldown_seconds: int = 300
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -233,6 +265,7 @@ StrategyParams = Union[
     OrbParams,
     StaticLevelBounceParams,
     StaticLevelBounceConfirmedExitParams,
+    EmaMeanReversionConfirmedParams,
 ]
 
 
@@ -261,8 +294,8 @@ class TickerParams(BaseModel):
     abs_margin: int
     min_total_volume: int
     throttle: float = 0.0
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    start_hour: Optional[int] = None
+    end_hour: Optional[int] = None
 
 
 class AggregationParams(BaseModel):
