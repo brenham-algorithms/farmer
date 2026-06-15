@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncIterator, Dict, Iterable, Iterator
+from zoneinfo import ZoneInfo
 
 from api.models import TickerParams
 from core.types import Tick
@@ -72,10 +73,18 @@ class CsvTicker:
 
                     # Filter by time if requested
                     t = _parse_ts_event(row[ts_event_i])
-                    if self.params.start_time and t < self.params.start_time:
-                        continue
-                    if self.params.end_time and t > self.params.end_time:
-                        continue
+                    
+                    if self.params.start_hour is not None or self.params.end_hour is not None:
+                        local_hour = t.astimezone(ZoneInfo("America/Chicago")).hour
+                        if self.params.start_hour is not None and local_hour < self.params.start_hour:
+                            continue
+                        if self.params.end_hour is not None and local_hour >= self.params.end_hour:
+                            continue
+
+                    # if self.params.start_time and t < self.params.start_time:
+                    #     continue
+                    # if self.params.end_time and t > self.params.end_time:
+                    #     continue
 
                     # Track cumulative volume per symbol
                     self.symbol_volumes[row[symbol_i]] += int(row[size_i])

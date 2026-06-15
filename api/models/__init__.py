@@ -6,6 +6,7 @@ from .models import (
     CsvDataSource,
     DataSource,
     EmaMeanReversionParams,
+    EmaMeanReversionConfirmedParams,
     FarmerConfig,
     OrbParams,
     ProjectXDataSource,
@@ -23,6 +24,7 @@ from .models import (
 __all__ = [
     "StaticBounceParams",
     "EmaMeanReversionParams",
+    "EmaMeanReversionConfirmedParams",
     "VwapMeanReversionParams",
     "VwapMeanReversionLadderParams",
     "OrbParams",

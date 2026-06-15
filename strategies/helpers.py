@@ -5,6 +5,7 @@ from api.models import StrategyConfig
 from core import Strategy
 
 from .ema_mean_reversion import EmaMeanReversion
+from .ema_mean_reversion_confirmed import EmaMeanReversionConfirmed
 from .opening_range_breakout import OpeningRangeBreakout
 from .static_bounce import StaticBounce
 from .static_level_bounce import StaticLevelBounce
@@ -20,6 +21,8 @@ def build_strategy(
         return StaticBounce(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "mean_reversion_ema":
         return EmaMeanReversion(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "ema_mean_reversion_confirmed":
+        return EmaMeanReversionConfirmed(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "vwap_mean_reversion":
         return VwapMeanReversion(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "vwap_mean_reversion_ladder":
