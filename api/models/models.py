@@ -257,6 +257,100 @@ class EmaMeanReversionConfirmedParams(BaseModel):
     cooldown_seconds: int = 300
 
 
+class VwapCascadeReversalParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["vwap_cascade_reversal"] = "vwap_cascade_reversal"
+    precision: int = 2
+
+    # VWAP zone
+    zone_ticks: int = 8  # how close to VWAP = "at VWAP"
+    scan_ticks: int = 80  # how far above/below VWAP to scan for trapped delta
+    bucket_ticks: int = 4  # delta profile bucket size
+
+    # Trapped detection
+    min_trapped_delta: int = 200  # minimum net delta to consider traders trapped
+
+    # Cascade detection
+    cascade_volume_spike: int = 500  # volume on the continuation move
+    cascade_delta_ratio: float = 0.30  # how directional the cascade must be
+
+    # Position
+    num_contracts: int = 1
+    reward_ticks: int = 40
+    risk_ticks: int = 20
+
+    # Exit confirmation
+    exit_attempt_seconds: int = 30
+    exit_delta_ratio_threshold: float = 0.60
+    exit_min_response_ticks: int = 2
+    exit_min_attempt_volume: int = 200
+    exit_min_absorption_ratio: float = 0.0
+    exit_absorption_ticks: int = 2
+
+    # Session
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+    seed_from_candles: bool = False
+
+    cooldown_seconds: int = 300
+
+    trading_start_hour: Optional[int] = None
+    trading_end_hour: Optional[int] = None
+
+
+class VwapDiagnosticParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["vwap_diagnostic"] = "vwap_diagnostic"
+    precision: int = 2
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+    seed_from_candles: bool = False
+
+
+class AbsorptionBounceParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["absorption_bounce"] = "absorption_bounce"
+    precision: int = 2
+
+    # Level definition
+    level: float
+    support: bool = True
+    resistance: bool = True
+
+    # Zone definition
+    ticks_above: int = 8
+    ticks_below: int = 8
+
+    # Risk/reward
+    risk_ticks: int = 40
+    reward_ticks: int = 400  # set high to effectively disable
+    num_contracts: int = 1
+
+    # Entry confirmation
+    entry_attempt_seconds: int = 30
+    entry_delta_ratio_threshold: float = -0.15
+    entry_min_response_ticks: int = 2
+    entry_min_attempt_volume: int = 200
+    entry_min_absorption_ratio: float = 0.40
+
+    # Exit confirmation
+    exit_attempt_seconds: int = 30
+    exit_delta_ratio_threshold: float = 0.60
+    exit_min_response_ticks: int = 2
+    exit_min_attempt_volume: int = 200
+    exit_absorption_ticks: int = 2
+
+    # Standard cooldown filter
+    cooldown_seconds: int = 300
+
+    # Optional parameters
+    trading_start_hour: Optional[int] = None
+    trading_end_hour: Optional[int] = None
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -266,6 +360,9 @@ StrategyParams = Union[
     StaticLevelBounceParams,
     StaticLevelBounceConfirmedExitParams,
     EmaMeanReversionConfirmedParams,
+    VwapCascadeReversalParams,
+    VwapDiagnosticParams,
+    AbsorptionBounceParams,
 ]
 
 
@@ -294,8 +391,6 @@ class TickerParams(BaseModel):
     abs_margin: int
     min_total_volume: int
     throttle: float = 0.0
-    start_hour: Optional[int] = None
-    end_hour: Optional[int] = None
 
 
 class AggregationParams(BaseModel):
