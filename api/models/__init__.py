@@ -1,4 +1,5 @@
 from .models import (
+    AbsorptionBounceParams,
     AggregationParams,
     BacktestConfig,
     BacktestResponse,
@@ -14,7 +15,6 @@ from .models import (
     StaticBounceParams,
     StaticLevelBounceConfirmedExitParams,
     StaticLevelBounceParams,
-    AbsorptionBounceParams,
     StrategyConfig,
     StrategyParams,
     TickerParams,
