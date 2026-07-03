@@ -71,29 +71,7 @@ class CsvTicker:
                     if row[symbol_i] not in self.params.symbols:
                         continue
 
-                    # Filter by time if requested
                     t = _parse_ts_event(row[ts_event_i])
-
-                    if (
-                        self.params.start_hour is not None
-                        or self.params.end_hour is not None
-                    ):
-                        local_hour = t.astimezone(ZoneInfo("America/Chicago")).hour
-                        if (
-                            self.params.start_hour is not None
-                            and local_hour < self.params.start_hour
-                        ):
-                            continue
-                        if (
-                            self.params.end_hour is not None
-                            and local_hour >= self.params.end_hour
-                        ):
-                            continue
-
-                    # if self.params.start_time and t < self.params.start_time:
-                    #     continue
-                    # if self.params.end_time and t > self.params.end_time:
-                    #     continue
 
                     # Track cumulative volume per symbol
                     self.symbol_volumes[row[symbol_i]] += int(row[size_i])
