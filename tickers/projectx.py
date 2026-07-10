@@ -1,13 +1,13 @@
 import logging
 import time as t
 from datetime import datetime
-from typing import Any, Callable, Dict
+from typing import Callable
 
+from projectx_client import Auth
 from signalrcore.hub_connection_builder import HubConnectionBuilder
 
 from api.models import TickerParams
 from core.types import Tick
-from projectx_client import Auth
 
 from .state import TickerState
 
