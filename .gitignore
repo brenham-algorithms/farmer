@@ -6,3 +6,4 @@ venv/
 *_historical/
 .mypy_cache/
 repo_dump.txt
+*.egg-info/

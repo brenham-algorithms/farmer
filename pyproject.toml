@@ -1,2 +1,60 @@
+[project]
+name = "farmer"
+version = "0.1.0"
+description = "Modular futures trading framework for developing, testing, and deploying systematic strategies"
+requires-python = ">=3.12"
+dependencies = [
+    "colorama>=0.4.6",
+    "lxml>=6.0.2",
+    "numpy>=2.3.2",
+    "pandas>=2.3.2",
+    "projectx-client @ git+https://github.com/brenham-algorithms/projectx-python.git",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "PyYAML>=6.0.2",
+    "requests>=2.34.2",
+    "signalrcore>=0.9.5",
+    "tabulate>=0.9.0",
+    "websocket-client>=1.0.0",
+    "black>=25.1.0",
+    "isort>=7.0.0",
+    "mypy>=1.18.2",
+    "pytest>=9.0.2",
+    "pandas-stubs>=2.3.2",
+    "types-colorama>=0.4.15",
+    "types-pytz>=2025.2.0",
+    "types-PyYAML>=6.0.12",
+    "types-requests>=2.32.4",
+    "types-tabulate>=0.9.0",
+    "python-json-logger>=3.3.0",
+]
+
+[build-system]
+requires = ["setuptools>=83.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = [
+    "api*",
+    "calculations*",
+    "config*",
+    "core*",
+    "farm*",
+    "strategies*",
+    "tickers*",
+    "aggregators*",
+]
+
+[tool.black]
+target-version = ["py312"]
+
 [tool.isort]
 profile = "black"
+
+[tool.mypy]
+python_version = "3.12"
+exclude = ["^venv/", "^\\.venv/"]
+
+[[tool.mypy.overrides]]
+module = "signalrcore.*"
+ignore_missing_imports = true

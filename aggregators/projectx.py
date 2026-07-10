@@ -3,8 +3,9 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-from api.models import AggregationParams
 from projectx_client import Auth, MarketData
+
+from api.models import AggregationParams
 
 
 class ProjectXAggregator:
