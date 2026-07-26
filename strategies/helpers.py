@@ -15,6 +15,7 @@ from .vwap_cascade_reversal import VwapCascadeReversal
 from .vwap_diagnostic import VwapDiagnostic
 from .vwap_mean_reversion import VwapMeanReversion
 from .vwap_mean_reversion_ladder import VwapMeanReversionLadder
+from .wick_reversal import WickReversal
 
 
 def build_strategy(
@@ -42,5 +43,7 @@ def build_strategy(
         return StaticLevelBounceConfirmedExit(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "absorption_bounce":
         return AbsorptionBounce(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "wick_reversal":
+        return WickReversal(logger, candles, config.strategy_params)
     else:
         raise ValueError(f"Unsupported strategy kind: {config.strategy_params.kind}")
