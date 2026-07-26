@@ -4,7 +4,7 @@ from typing import Any, Dict
 from aggregators import ProjectXAggregator
 from api.models import StrategyConfig
 from strategies import build_strategy
-from tickers import ProjectXTicker, TickerState
+from tickers import ProjectXTicker, RedisTicker, TickerState
 
 
 class Farmer:
@@ -29,12 +29,25 @@ class Farmer:
             position=None,
         )
 
-        self.ticker = ProjectXTicker(
-            logger,
-            strategy_conf.ticker_params,
-            self.strategy.get_live_handler(),
-            self.handler_state,
-        )
+        self.ticker: ProjectXTicker | RedisTicker
+        if strategy_conf.ticker_params.data_source.kind == "projectx":
+            self.ticker = ProjectXTicker(
+                logger,
+                strategy_conf.ticker_params,
+                self.strategy.get_live_handler(),
+                self.handler_state,
+            )
+        elif strategy_conf.ticker_params.data_source.kind == "redis":
+            self.ticker = RedisTicker(
+                logger,
+                strategy_conf.ticker_params,
+                self.strategy.get_live_handler(),
+                self.handler_state,
+            )
+        else:
+            raise ValueError(
+                f"Invalid data source for Farmer: {strategy_conf.ticker_params.data_source.kind}"
+            )
 
     def start(self):
         self.ticker.start()

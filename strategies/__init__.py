@@ -11,6 +11,7 @@ from .vwap_cascade_reversal import VwapCascadeReversal
 from .vwap_diagnostic import VwapDiagnostic
 from .vwap_mean_reversion import VwapMeanReversion
 from .vwap_mean_reversion_ladder import VwapMeanReversionLadder
+from .wick_reversal import WickReversal
 
 __all__ = [
     "AbsorptionBounce",
@@ -25,5 +26,6 @@ __all__ = [
     "VwapDiagnostic",
     "VwapMeanReversion",
     "VwapMeanReversionLadder",
+    "WickReversal",
     "build_strategy",
 ]

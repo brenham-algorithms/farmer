@@ -351,6 +351,54 @@ class AbsorptionBounceParams(BaseModel):
     trading_end_hour: Optional[int] = None
 
 
+class WickReversalParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["wick_reversal"] = "wick_reversal"
+    precision: int = 2
+
+    # Candle timeframe
+    candle_minutes: int = 1
+
+    # Wick detection
+    min_wick_ticks: int = 80
+
+    # Both-wicks filter; if shorter/longer >= this, skip
+    wick_ratio_threshold: float = 0.75
+
+    # Position sizing
+    num_contracts: int = 2
+
+    # Stop loss as percentage of wick length
+    stop_wick_pct: float = 0.50
+
+    # Take profit as percentage of wick length
+    tp_wick_pct: float = 1.0
+    tp_contracts: int = 1
+
+    # Trailing stop as percentage of wick length after TP hit
+    trail_wick_pct: float = 0.50
+
+    # Daily limits; dollars; realized only
+    daily_loss_limit: float = -200.0
+    daily_tp_limit: float = 500.0
+
+    # Session
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+
+    # Volume filters
+    min_candle_volume: Optional[int] = None
+    max_candle_volume: Optional[int] = None
+
+    # Time filters
+    trading_start_hour: Optional[int] = None
+    trading_end_hour: Optional[int] = None
+
+    # Lookback for filtering on isolated highs and lows
+    lookback_candles: Optional[int] = None
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -363,6 +411,7 @@ StrategyParams = Union[
     VwapCascadeReversalParams,
     VwapDiagnosticParams,
     AbsorptionBounceParams,
+    WickReversalParams,
 ]
 
 
@@ -380,7 +429,14 @@ class ProjectXDataSource(BaseModel):
     contract_id: str
 
 
-DataSource = Union[CsvDataSource, ProjectXDataSource]
+class RedisDataSource(BaseModel):
+    kind: Literal["redis"] = "redis"
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    contract_id: str
+
+
+DataSource = Union[CsvDataSource, ProjectXDataSource, RedisDataSource]
 
 
 class TickerParams(BaseModel):
