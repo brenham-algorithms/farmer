@@ -58,11 +58,6 @@ class Position:
             )
             self._brackets_active = True
 
-    # def __post_init__(self) -> None:
-    #     if self.order_manager and self.entries:
-    #         total_size = sum(e.size for e in self.entries)
-    #         self.order_manager.enter_position(self.direction, total_size)
-
     def add(self, size: int, add_price: float) -> None:
         self.entries.append(Entry(price=add_price, size=size))
         if self.order_manager:
