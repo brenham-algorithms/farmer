@@ -1,6 +1,8 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List
+from typing import Any, List, Optional
 
 
 @dataclass(frozen=True)
@@ -37,14 +39,37 @@ class Position:
     take_profit: float = 0.00
     stop_loss: float = 0.00
     unwinding: bool = False
+    order_manager: Optional[Any] = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        self._brackets_active = False
+        if self.order_manager and self.entries:
+            total_size = sum(e.size for e in self.entries)
+            sl_ticks = round(
+                abs(self.entries[0].price - self.stop_loss) / self.tick_size
+            )
+            tp_ticks = (
+                round(abs(self.take_profit - self.entries[0].price) / self.tick_size)
+                if self.take_profit != 0.0
+                else None
+            )
+            self.order_manager.enter_position(
+                self.direction, total_size, sl_ticks=sl_ticks, tp_ticks=tp_ticks
+            )
+            self._brackets_active = True
 
     def add(self, size: int, add_price: float) -> None:
         self.entries.append(Entry(price=add_price, size=size))
+        if self.order_manager:
+            self.order_manager.enter_position(self.direction, size)
 
     def cut(self, size: int, cut_price: float) -> float:
         pnl = 0.0
         if size >= self.num_contracts():
             return self.close(cut_price)
+
+        if self.order_manager and not self._brackets_active:
+            self.order_manager.reduce_position(self.direction, size)
 
         remaining = size
         while remaining > 0 and self.entries:
@@ -74,6 +99,10 @@ class Position:
         return round(pnl, 2)
 
     def close(self, close_price: float) -> float:
+        if self.order_manager and not self._brackets_active:
+            total_size = self.num_contracts()
+            self.order_manager.close_position(self.direction, total_size)
+
         pnl = 0.0
         for entry in self.entries:
             if self.direction == "LONG":

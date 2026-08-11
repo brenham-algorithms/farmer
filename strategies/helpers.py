@@ -5,9 +5,11 @@ from api.models import StrategyConfig
 from core import Strategy
 
 from .absorption_bounce import AbsorptionBounce
+from .ema_bounce import EmaBounce
 from .ema_mean_reversion import EmaMeanReversion
 from .ema_mean_reversion_confirmed import EmaMeanReversionConfirmed
 from .opening_range_breakout import OpeningRangeBreakout
+from .prior_day_hl_bounce import PriorDayHlBounce
 from .static_bounce import StaticBounce
 from .static_level_bounce import StaticLevelBounce
 from .static_level_bounce_confirmed_exit import StaticLevelBounceConfirmedExit
@@ -45,5 +47,9 @@ def build_strategy(
         return AbsorptionBounce(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "wick_reversal":
         return WickReversal(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "ema_bounce":
+        return EmaBounce(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "prior_day_hl_bounce":
+        return PriorDayHlBounce(logger, candles, config.strategy_params)
     else:
         raise ValueError(f"Unsupported strategy kind: {config.strategy_params.kind}")

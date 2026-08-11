@@ -39,16 +39,20 @@ async def _run_backtest_async_without_seeding(
     if logger is None:
         logger = logging.getLogger("backtest_async_without_seeding")
 
+    persist = config.strategy.persist_across_files
+    if persist:
+        strategy = build_strategy(config.strategy, logger, [])
+        handler = strategy.get_backtest_handler()
+        state = TickerState(strategy=strategy, total_pnl=0.0, position=None)
+
+    running_total = 0.0
     for bt_date in config.get_dates():
         logger.info(f"Running backtest {config.name} for date: {bt_date}")
 
-        # Initialize / reset requested strategy.
-        # The candles list is empty because no seeding is required for this backtest mode
-        strategy = build_strategy(config.strategy, logger, [])
-        handler = strategy.get_backtest_handler()
-
-        # Initialize / reset handler state
-        state: TickerState = TickerState(strategy=strategy)
+        if not persist:
+            strategy = build_strategy(config.strategy, logger, [])
+            handler = strategy.get_backtest_handler()
+            state = TickerState(strategy=strategy, total_pnl=0.0, position=None)
 
         ticker = CsvTicker(logger, config.strategy.ticker_params, bt_date)
 
@@ -58,10 +62,11 @@ async def _run_backtest_async_without_seeding(
 
         results.append(
             BacktestResult(
-                pnl=round(state.total_pnl, 2),
+                pnl=round(state.total_pnl - running_total, 2),
                 trades_file=str(ticker.trade_path),
             )
         )
+        running_total = state.total_pnl if persist else 0.0
 
     return BacktestResponse(
         backtest_name=config.name,
