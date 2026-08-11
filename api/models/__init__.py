@@ -23,6 +23,8 @@ from .models import (
     VwapMeanReversionLadderParams,
     VwapMeanReversionParams,
     WickReversalParams,
+    EmaBounceParams,
+    PriorDayHlBounceParams,
 )
 
 __all__ = [
@@ -38,6 +40,8 @@ __all__ = [
     "StaticLevelBounceConfirmedExitParams",
     "AbsorptionBounceParams",
     "WickReversalParams",
+    "EmaBounceParams",
+    "PriorDayHlBounceParams",
     "StrategyParams",
     "CsvDataSource",
     "ProjectXDataSource",

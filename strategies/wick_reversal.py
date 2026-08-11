@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
-from colorama import Fore
+from colorama import Fore, Style
 
 from api.models import WickReversalParams
 from config import log_with_color
@@ -221,7 +221,7 @@ class WickReversal:
                     return
 
         self.logger.info(
-            f"[{self._ct(close_time)}] WICK SIGNAL: {direction} "
+            f"[{self._ct(close_time)}] WICK SIGNAL: {Fore.GREEN if direction == 'LONG' else Fore.RED}{direction}{Style.RESET_ALL} "
             f"wick={wick_ticks:.0f} ticks "
             f"O={candle.open:.{self.precision}f} H={candle.high:.{self.precision}f} "
             f"L={candle.low:.{self.precision}f} C={candle.close:.{self.precision}f}"
@@ -282,7 +282,18 @@ class WickReversal:
             )
 
             # Emit pending signal on first tick of new candle
+            in_position = kwargs.get("in_position", False)
             if self._pending_signal is not None:
+                if in_position:
+                    direction = self._pending_signal["direction"]
+                    wick_ticks = self._pending_signal["wick_length"] / self.tick_size
+                    self.logger.info(
+                        f"[{self._ct(now)}] WICK SIGNAL (IN POSITION, SKIPPED): {direction} "
+                        f"wick={wick_ticks:.0f}t"
+                    )
+                    self._pending_signal = None
+                    return None
+
                 # Check trading hours
                 if (
                     self.trading_start_hour is not None
@@ -341,7 +352,7 @@ class WickReversal:
                 wick_ticks = wick_length / self.tick_size
 
                 self.logger.info(
-                    f"[{self._ct(now)}] {direction} WICK REVERSAL at {entry} "
+                    f"[{self._ct(now)}] {Fore.GREEN if direction == 'LONG' else Fore.RED}{direction}{Style.RESET_ALL} WICK REVERSAL at {entry} "
                     f"wick={wick_ticks:.0f}t "
                     f"tp={take_profit} sl={stop_loss} "
                     f"contracts={self.num_contracts}"
@@ -427,11 +438,12 @@ def wick_reversal_handler(
                 tick_value=strategy.tick_value,
                 take_profit=signal.profit_target,
                 stop_loss=signal.stop_target,
+                order_manager=state.order_manager,
             )
         return
 
     # Still need to update the candle even while in a position
-    strategy.check(tick)
+    strategy.check(tick, in_position=True)
 
     direction = position.direction
 

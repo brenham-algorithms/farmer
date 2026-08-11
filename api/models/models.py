@@ -399,6 +399,91 @@ class WickReversalParams(BaseModel):
     lookback_candles: Optional[int] = None
 
 
+class EmaBounceParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["ema_bounce"] = "ema_bounce"
+    precision: int = 2
+
+    # EMA
+    ema_period: int = 200
+    candle_length: int = 1
+
+    # Position sizing
+    num_contracts: int = 1
+
+    # Zone around EMA in ticks
+    zone_ticks: int = 8
+
+    # Risk and reward in ticks
+    risk_ticks: int = 40
+    reward_ticks: int = 40
+
+    # Re-entry distance; ticks from EMA after trade completes
+    re_entry_distance_ticks: int = 20
+
+    # Confirmation; set use_confirmation=False to disable
+    use_confirmation: bool = True
+    entry_attempt_seconds: int = 30
+    entry_delta_ratio_threshold: float = -0.15
+    entry_min_response_ticks: int = 2
+    entry_min_attempt_volume: int = 200
+    entry_min_absorption_ratio: float = 0.40
+
+    # Trading hours
+    trading_start_hour: Optional[int] = None
+    trading_end_hour: Optional[int] = None
+
+    # Session
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+
+
+class PriorDayHlBounceParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["prior_day_hl_bounce"] = "prior_day_hl_bounce"
+    precision: int = 2
+
+    # Levels
+    support: bool = True
+    resistance: bool = True
+
+    # Zone around PDH/PDL (in ticks)
+    zone_ticks: int = 8
+
+    # Risk/reward (in ticks)
+    risk_ticks: int = 40
+    reward_ticks: int = 60
+
+    # Position sizing
+    num_contracts: int = 1
+
+    # Confirmation
+    use_confirmation: bool = True
+    entry_attempt_seconds: int = 30
+    entry_delta_ratio_threshold: float = -0.15
+    entry_min_response_ticks: int = 2
+    entry_min_attempt_volume: int = 200
+    entry_min_absorption_ratio: float = 0.40
+
+    # Exit confirmation
+    exit_attempt_seconds: int = 30
+    exit_delta_ratio_threshold: float = 0.60
+    exit_min_response_ticks: int = 2
+    exit_min_attempt_volume: int = 200
+    exit_absorption_ticks: int = 2
+
+    # Trading hours
+    trading_start_hour: Optional[int] = None
+    trading_end_hour: Optional[int] = None
+
+    # Session
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+    cooldown_seconds: int = 300
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -412,6 +497,8 @@ StrategyParams = Union[
     VwapDiagnosticParams,
     AbsorptionBounceParams,
     WickReversalParams,
+    EmaBounceParams,
+    PriorDayHlBounceParams,
 ]
 
 
@@ -456,9 +543,22 @@ class AggregationParams(BaseModel):
     unit: str = "minutes"
 
 
+class OrderManagementConfig(BaseModel):
+    enabled: bool = False
+    kind: Literal["projectx"] = "projectx"
+    base_url: str
+    user_hub_base_url: str
+    username: str
+    api_key: str
+    account_id: int
+    contract_id: str
+
+
 class StrategyConfig(BaseModel):
     ticker_params: Optional[TickerParams] = None
     aggregation_params: Optional[AggregationParams] = None
+    order_management: Optional[OrderManagementConfig] = None
+    persist_across_files: bool = False
     strategy_params: StrategyParams
 
 
