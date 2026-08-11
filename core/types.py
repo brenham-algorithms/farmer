@@ -45,11 +45,19 @@ class Position:
         self._brackets_active = False
         if self.order_manager and self.entries:
             total_size = sum(e.size for e in self.entries)
-            sl_ticks = round(abs(self.entries[0].price - self.stop_loss) / self.tick_size)
-            tp_ticks = round(abs(self.take_profit - self.entries[0].price) / self.tick_size) if self.take_profit != 0.0 else None
-            self.order_manager.enter_position(self.direction, total_size, sl_ticks=sl_ticks, tp_ticks=tp_ticks)
+            sl_ticks = round(
+                abs(self.entries[0].price - self.stop_loss) / self.tick_size
+            )
+            tp_ticks = (
+                round(abs(self.take_profit - self.entries[0].price) / self.tick_size)
+                if self.take_profit != 0.0
+                else None
+            )
+            self.order_manager.enter_position(
+                self.direction, total_size, sl_ticks=sl_ticks, tp_ticks=tp_ticks
+            )
             self._brackets_active = True
-        
+
     # def __post_init__(self) -> None:
     #     if self.order_manager and self.entries:
     #         total_size = sum(e.size for e in self.entries)

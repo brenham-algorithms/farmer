@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Dict, Optional
 
-
 if TYPE_CHECKING:
     from core import Position, Strategy
     from order_managers import ProjectXOrderManager

@@ -6,10 +6,12 @@ from .models import (
     BacktestResult,
     CsvDataSource,
     DataSource,
+    EmaBounceParams,
     EmaMeanReversionConfirmedParams,
     EmaMeanReversionParams,
     FarmerConfig,
     OrbParams,
+    PriorDayHlBounceParams,
     ProjectXDataSource,
     QueryConfig,
     StaticBounceParams,
@@ -23,8 +25,6 @@ from .models import (
     VwapMeanReversionLadderParams,
     VwapMeanReversionParams,
     WickReversalParams,
-    EmaBounceParams,
-    PriorDayHlBounceParams,
 )
 
 __all__ = [

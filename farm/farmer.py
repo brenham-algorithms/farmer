@@ -68,9 +68,8 @@ class Farmer:
                 f"Invalid data source for Farmer: {strategy_conf.ticker_params.data_source.kind}"
             )
 
-
     def start(self):
         if self.order_manager:
             self.order_manager.start()
-        
+
         self.ticker.start()

@@ -2,10 +2,9 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
+from projectx_client import Auth, Orders, Positions
 from pydantic import BaseModel
 from signalrcore.hub_connection_builder import HubConnectionBuilder
-
-from projectx_client import Auth, Orders, Positions
 
 
 class ProjectXOrderManagerParams(BaseModel):
@@ -134,7 +133,13 @@ class ProjectXOrderManager:
 
     # Order dispatch
 
-    def enter_position(self, direction: str, size: int, sl_ticks: int = None, tp_ticks: int = None) -> Optional[int]:
+    def enter_position(
+        self,
+        direction: str,
+        size: int,
+        sl_ticks: Optional[int] = None,
+        tp_ticks: Optional[int] = None,
+    ) -> Optional[int]:
         side = 0 if direction == "LONG" else 1
 
         payload = {
@@ -164,7 +169,6 @@ class ProjectXOrderManager:
         except Exception as e:
             self.logger.error(f"ENTRY ORDER FAILED: {e}")
             return None
-
 
     def close_position(self, direction: str, size: int) -> Optional[int]:
         """Place a market order to close a position (opposite side)."""
