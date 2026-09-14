@@ -9,6 +9,7 @@ from api.models import EmaBounceParams
 from calculations.ema import LiveEma
 from config import log_with_color
 from core.types import Entry, Position, Signal, Tick
+from strategies.vwap_mean_reversion import BandAttempt
 from tickers import TickerState
 
 
@@ -143,11 +144,21 @@ class EmaBounce:
         self.trading_start_hour = params.trading_start_hour
         self.trading_end_hour = params.trading_end_hour
 
+        # Exit confirmation
+        self.exit_attempt_seconds = params.exit_attempt_seconds
+        self.exit_delta_ratio_threshold = params.exit_delta_ratio_threshold
+        self.exit_min_response_ticks = params.exit_min_response_ticks
+        self.exit_min_attempt_volume = params.exit_min_attempt_volume
+        self.exit_absorption_ticks = params.exit_absorption_ticks
+
         # Entry state
         self._attempt: Optional[AbsorptionAttempt] = None
         self._last_zone_state: Optional[str] = None
         self._entry_direction: Optional[str] = None
         self._needs_distance: bool = False
+
+        # Exit state
+        self._exit_attempt: Optional[BandAttempt] = None
 
         self.logger.info(
             f"EmaBounce initialized: ema_period={params.ema_period} "
@@ -387,16 +398,89 @@ class EmaBounce:
             stop_target=stop_loss,
         )
 
+    # ─── Exit confirmation ───
+
+    def check_exit(self, tick: Tick, position_direction: str) -> bool:
+        now = tick.t
+        delta = tick.delta()
+        exit_direction = "SHORT" if position_direction == "LONG" else "LONG"
+
+        if self._exit_attempt is not None:
+            if self._exit_attempt.is_expired(now):
+                self._exit_attempt = None
+            else:
+                self._exit_attempt.on_tick(now, tick.price, delta, tick.size)
+                if self._exit_confirmed(self._exit_attempt):
+                    dr = self._exit_attempt.delta_ratio()
+                    ar = self._exit_attempt.absorption_ratio()
+                    vol = self._exit_attempt.sum_volume
+
+                    self.logger.info(
+                        f"[{self._ct(now)}] EXIT CONFIRMED ({exit_direction} pressure) "
+                        f"@ {tick.price:.{self.precision}f} "
+                        f"dr={dr:.3f} ar={ar:.3f} vol={vol}"
+                    )
+
+                    self._exit_attempt = None
+                    return True
+                return False
+
+        self._exit_attempt = BandAttempt(
+            direction=exit_direction,
+            start_t=now,
+            expire_t=now + timedelta(seconds=self.exit_attempt_seconds),
+            start_price=tick.price,
+            min_price=tick.price,
+            max_price=tick.price,
+            last_price=tick.price,
+            tick_size=self.tick_size,
+            absorption_ticks=self.exit_absorption_ticks,
+        )
+        self._exit_attempt.on_tick(now, tick.price, delta, tick.size)
+
+        return False
+
+    def _exit_confirmed(self, attempt: BandAttempt) -> bool:
+        if attempt.sum_volume < self.exit_min_attempt_volume:
+            return False
+
+        dr = attempt.delta_ratio()
+        if attempt.direction == "LONG":
+            if dr < self.exit_delta_ratio_threshold:
+                return False
+        else:
+            if dr > -self.exit_delta_ratio_threshold:
+                return False
+
+        min_resp = self.exit_min_response_ticks * self.tick_size
+        if attempt.direction == "LONG":
+            if (attempt.last_price - attempt.min_price) < min_resp:
+                return False
+        else:
+            if (attempt.max_price - attempt.last_price) < min_resp:
+                return False
+
+        return True
+
+    # ─── Lifecycle ───
+
+    def on_entry(self) -> None:
+        self._attempt = None
+        self._entry_direction = None
+        self._exit_attempt = None
+
     def on_exit(self) -> None:
         self._needs_distance = True
         self._attempt = None
         self._entry_direction = None
+        self._exit_attempt = None
 
     def reset(self) -> None:
         self._attempt = None
         self._last_zone_state = None
         self._entry_direction = None
         self._needs_distance = False
+        self._exit_attempt = None
 
     def get_backtest_handler(
         self,
@@ -441,6 +525,7 @@ def ema_bounce_handler(tick: Tick, logger: logging.Logger, state: TickerState) -
                 stop_loss=signal.stop_target,
                 order_manager=state.order_manager,
             )
+            strategy.on_entry()
         return
 
     # Update zone state while in position
@@ -495,6 +580,27 @@ def ema_bounce_handler(tick: Tick, logger: logging.Logger, state: TickerState) -
         log_with_color(
             logger,
             f"[{strategy._ct(tick.t)}] EMA bounce take profit, "
+            f"Start = {ts_start}, End = {ts_end}, PnL = ${pnl:.2f}",
+            Fore.GREEN if pnl > 0 else Fore.RED,
+            "info",
+        )
+        state.position = None
+        return
+
+    # Confirmed exit
+    if strategy.check_exit(tick, direction):
+        pnl = position.close(tick.price)
+        state.total_pnl += pnl
+        strategy.on_exit()
+
+        ts_start = position.timestamp.replace(microsecond=0).astimezone(
+            ZoneInfo("America/Chicago")
+        )
+        ts_end = tick.t.replace(microsecond=0).astimezone(ZoneInfo("America/Chicago"))
+
+        log_with_color(
+            logger,
+            f"[{strategy._ct(tick.t)}] EMA bounce confirmed exit, "
             f"Start = {ts_start}, End = {ts_end}, PnL = ${pnl:.2f}",
             Fore.GREEN if pnl > 0 else Fore.RED,
             "info",

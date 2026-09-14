@@ -430,6 +430,13 @@ class EmaBounceParams(BaseModel):
     entry_min_attempt_volume: int = 200
     entry_min_absorption_ratio: float = 0.40
 
+    # Exit confirmation
+    exit_attempt_seconds: int = 30
+    exit_delta_ratio_threshold: float = 0.60
+    exit_min_response_ticks: int = 2
+    exit_min_attempt_volume: int = 200
+    exit_absorption_ticks: int = 2
+
     # Trading hours
     trading_start_hour: Optional[int] = None
     trading_end_hour: Optional[int] = None
@@ -484,6 +491,103 @@ class PriorDayHlBounceParams(BaseModel):
     cooldown_seconds: int = 300
 
 
+class AbsorptionScannerParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["absorption_scanner"] = "absorption_scanner"
+    precision: int = 2
+
+    # Rolling window
+    window_seconds: int = 60
+    bucket_ticks: int = 4
+    
+    # Detection thresholds
+    min_absorption_ratio: float = 0.40
+    min_window_volume: int = 200
+    max_window_volume: Optional[int] = None
+    proximity_ticks: int = 8
+    
+    # Position sizing
+    num_contracts: int = 1
+    
+    # Risk/reward
+    risk_ticks: int = 40
+    reward_ticks: int = 400  # set high to rely on confirmed exit
+    
+    # Exit confirmation
+    exit_attempt_seconds: int = 30
+    exit_delta_ratio_threshold: float = 0.60
+    exit_min_response_ticks: int = 2
+    exit_min_attempt_volume: int = 200
+    exit_absorption_ticks: int = 2
+
+    # Direction filter
+    direction: Optional[str] = None  # "LONG", "SHORT", or None for both
+
+    cooldown_seconds: int = 300
+
+    # Daily limits
+    daily_loss_limit: float = -500.0
+    daily_tp_limit: float = 500.0
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+    
+    # Trading hours
+    trading_start_hour: Optional[int] = None
+    trading_end_hour: Optional[int] = None
+
+
+class AbsorptionScannerWithDeltaParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["absorption_scanner_with_delta"] = "absorption_scanner_with_delta"
+    precision: int = 2
+
+    # Rolling window
+    window_seconds: int = 60
+    bucket_ticks: int = 4
+
+    # Absorption detection thresholds
+    min_absorption_ratio: float = 0.40
+    min_window_volume: int = 200
+    max_window_volume: Optional[int] = None
+    proximity_ticks: int = 8
+
+    # Delta confirmation (phase 2)
+    delta_confirmation_seconds: int = 30
+    delta_confirmation_threshold: float = 0.15
+    delta_confirmation_min_volume: int = 100
+
+    # Position sizing
+    num_contracts: int = 1
+
+    # Risk/reward
+    risk_ticks: int = 40
+    reward_ticks: int = 400
+
+    # Exit confirmation
+    exit_attempt_seconds: int = 30
+    exit_delta_ratio_threshold: float = 0.60
+    exit_min_response_ticks: int = 2
+    exit_min_attempt_volume: int = 200
+    exit_absorption_ticks: int = 2
+
+    # Direction filter
+    direction: Optional[str] = None  # "LONG", "SHORT", or None for both
+
+    # Daily limits
+    daily_loss_limit: float = -500.0
+    daily_tp_limit: float = 500.0
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+
+    # Trading hours
+    trading_start_hour: Optional[int] = None
+    trading_end_hour: Optional[int] = None
+
+    cooldown_seconds: int = 300
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -499,6 +603,8 @@ StrategyParams = Union[
     WickReversalParams,
     EmaBounceParams,
     PriorDayHlBounceParams,
+    AbsorptionScannerParams,
+    AbsorptionScannerWithDeltaParams,
 ]
 
 

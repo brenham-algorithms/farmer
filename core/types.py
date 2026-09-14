@@ -40,23 +40,25 @@ class Position:
     stop_loss: float = 0.00
     unwinding: bool = False
     order_manager: Optional[Any] = field(default=None, repr=False)
+    use_brackets: bool = False
 
     def __post_init__(self) -> None:
-        self._brackets_active = False
         if self.order_manager and self.entries:
             total_size = sum(e.size for e in self.entries)
-            sl_ticks = round(
-                abs(self.entries[0].price - self.stop_loss) / self.tick_size
-            )
-            tp_ticks = (
-                round(abs(self.take_profit - self.entries[0].price) / self.tick_size)
-                if self.take_profit != 0.0
-                else None
-            )
-            self.order_manager.enter_position(
-                self.direction, total_size, sl_ticks=sl_ticks, tp_ticks=tp_ticks
-            )
-            self._brackets_active = True
+            if self.use_brackets and self.stop_loss != 0.0:
+                sl_ticks = round(
+                    abs(self.entries[0].price - self.stop_loss) / self.tick_size
+                )
+                tp_ticks = (
+                    round(abs(self.take_profit - self.entries[0].price) / self.tick_size)
+                    if self.take_profit != 0.0
+                    else None
+                )
+                self.order_manager.enter_position(
+                    self.direction, total_size, sl_ticks=sl_ticks, tp_ticks=tp_ticks
+                )
+            else:
+                self.order_manager.enter_position(self.direction, total_size)
 
     def add(self, size: int, add_price: float) -> None:
         self.entries.append(Entry(price=add_price, size=size))
@@ -68,7 +70,7 @@ class Position:
         if size >= self.num_contracts():
             return self.close(cut_price)
 
-        if self.order_manager and not self._brackets_active:
+        if self.order_manager and not self.use_brackets:
             self.order_manager.reduce_position(self.direction, size)
 
         remaining = size
@@ -99,9 +101,8 @@ class Position:
         return round(pnl, 2)
 
     def close(self, close_price: float) -> float:
-        if self.order_manager and not self._brackets_active:
-            total_size = self.num_contracts()
-            self.order_manager.close_position(self.direction, total_size)
+        if self.order_manager and not self.use_brackets:
+            self.order_manager.close_position()
 
         pnl = 0.0
         for entry in self.entries:

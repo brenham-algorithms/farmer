@@ -439,6 +439,7 @@ def wick_reversal_handler(
                 take_profit=signal.profit_target,
                 stop_loss=signal.stop_target,
                 order_manager=state.order_manager,
+                use_brackets=True,
             )
         return
 

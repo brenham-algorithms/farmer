@@ -1,4 +1,6 @@
 from .absorption_bounce import AbsorptionBounce
+from .absorption_scanner import AbsorptionScanner
+from .absorption_scanner_with_delta import AbsorptionScannerWithDelta
 from .dummy import Dummy
 from .ema_bounce import EmaBounce
 from .ema_mean_reversion import EmaMeanReversion
@@ -17,6 +19,8 @@ from .wick_reversal import WickReversal
 
 __all__ = [
     "AbsorptionBounce",
+    "AbsorptionScanner",
+    "AbsorptionScannerWithDelta",
     "Dummy",
     "EmaBounce",
     "EmaMeanReversion",
