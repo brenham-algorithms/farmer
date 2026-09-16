@@ -1,5 +1,7 @@
 from .models import (
     AbsorptionBounceParams,
+    AbsorptionScannerParams,
+    AbsorptionScannerWithDeltaParams,
     AggregationParams,
     BacktestConfig,
     BacktestResponse,
@@ -42,6 +44,8 @@ __all__ = [
     "WickReversalParams",
     "EmaBounceParams",
     "PriorDayHlBounceParams",
+    "AbsorptionScannerParams",
+    "AbsorptionScannerWithDeltaParams",
     "StrategyParams",
     "CsvDataSource",
     "ProjectXDataSource",

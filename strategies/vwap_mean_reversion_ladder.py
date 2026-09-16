@@ -248,6 +248,7 @@ def vwap_mean_reversion_ladder_live_handler(
                 tick_value=strategy.tick_value,
                 stop_loss=signal.stop_target,
                 unwinding=False,
+                order_manager=state.order_manager,
             )
         return
 

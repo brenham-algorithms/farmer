@@ -5,6 +5,8 @@ from api.models import StrategyConfig
 from core import Strategy
 
 from .absorption_bounce import AbsorptionBounce
+from .absorption_scanner import AbsorptionScanner
+from .absorption_scanner_with_delta import AbsorptionScannerWithDelta
 from .ema_bounce import EmaBounce
 from .ema_mean_reversion import EmaMeanReversion
 from .ema_mean_reversion_confirmed import EmaMeanReversionConfirmed
@@ -51,5 +53,9 @@ def build_strategy(
         return EmaBounce(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "prior_day_hl_bounce":
         return PriorDayHlBounce(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "absorption_scanner":
+        return AbsorptionScanner(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "absorption_scanner_with_delta":
+        return AbsorptionScannerWithDelta(logger, candles, config.strategy_params)
     else:
         raise ValueError(f"Unsupported strategy kind: {config.strategy_params.kind}")

@@ -170,10 +170,22 @@ class ProjectXOrderManager:
             self.logger.error(f"ENTRY ORDER FAILED: {e}")
             return None
 
-    def close_position(self, direction: str, size: int) -> Optional[int]:
-        """Place a market order to close a position (opposite side)."""
-        side = 1 if direction == "LONG" else 0
+    def close_position(self) -> bool:
+        """Place a market order to close a position along with any existing brackets."""
+        try:
+            result = self.positions.close_contract(
+                accountId=self.params.account_id,
+                contractId=self.params.contract_id,
+            )
+            self.logger.info(f"CLOSE POSITION: {self.params.contract_id}")
+            return result.get("success", False)
+        except Exception as e:
+            self.logger.error(f"CLOSE POSITION FAILED: {e}")
+            return False
 
+    def reduce_position(self, direction: str, size: int) -> Optional[int]:
+        """Place a market order to reduce position size."""
+        side = 1 if direction == "LONG" else 0
         try:
             order_id = self.orders.place(
                 accountId=self.params.account_id,
@@ -184,7 +196,7 @@ class ProjectXOrderManager:
             )
 
             self.logger.info(
-                f"CLOSE ORDER PLACED: {'BUY' if side == 0 else 'SELL'} "
+                f"REDUCE POSITION PLACED: {'BUY' if side == 0 else 'SELL'} "
                 f"{size} {self.params.contract_id} order_id={order_id}"
             )
 
@@ -192,13 +204,10 @@ class ProjectXOrderManager:
 
         except Exception as e:
             self.logger.error(
-                f"CLOSE ORDER FAILED: {'BUY' if side == 0 else 'SELL'} " f"{size} — {e}"
+                f"REDUCE POSITION FAILED: {'BUY' if side == 0 else 'SELL'} "
+                f"{size} — {e}"
             )
             return None
-
-    def reduce_position(self, direction: str, size: int) -> Optional[int]:
-        """Place a market order to reduce position size."""
-        return self.close_position(direction, size)
 
     # User hub event handlers
 
@@ -219,13 +228,13 @@ class ProjectXOrderManager:
         self.logger.error(f"user hub error: {error}")
 
     def _on_order_event(self, args) -> None:
-        self.logger.info(f"ORDER EVENT: {json.dumps(args, indent=2)}")
+        self.logger.debug(f"ORDER EVENT: {json.dumps(args, indent=2)}")
 
     def _on_position_event(self, args) -> None:
-        self.logger.info(f"POSITION EVENT: {json.dumps(args, indent=2)}")
+        self.logger.debug(f"POSITION EVENT: {json.dumps(args, indent=2)}")
 
     def _on_account_event(self, args) -> None:
-        self.logger.info(f"ACCOUNT EVENT: {json.dumps(args, indent=2)}")
+        self.logger.debug(f"ACCOUNT EVENT: {json.dumps(args, indent=2)}")
 
     def _on_trade_event(self, args) -> None:
-        self.logger.info(f"TRADE EVENT: {json.dumps(args, indent=2)}")
+        self.logger.debug(f"TRADE EVENT: {json.dumps(args, indent=2)}")
