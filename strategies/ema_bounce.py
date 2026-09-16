@@ -398,7 +398,7 @@ class EmaBounce:
             stop_target=stop_loss,
         )
 
-    # ─── Exit confirmation ───
+    # Exit confirmation
 
     def check_exit(self, tick: Tick, position_direction: str) -> bool:
         now = tick.t
@@ -462,7 +462,7 @@ class EmaBounce:
 
         return True
 
-    # ─── Lifecycle ───
+    # Lifecycle
 
     def on_entry(self) -> None:
         self._attempt = None
