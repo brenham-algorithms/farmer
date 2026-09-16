@@ -500,20 +500,20 @@ class AbsorptionScannerParams(BaseModel):
     # Rolling window
     window_seconds: int = 60
     bucket_ticks: int = 4
-    
+
     # Detection thresholds
     min_absorption_ratio: float = 0.40
     min_window_volume: int = 200
     max_window_volume: Optional[int] = None
     proximity_ticks: int = 8
-    
+
     # Position sizing
     num_contracts: int = 1
-    
+
     # Risk/reward
     risk_ticks: int = 40
     reward_ticks: int = 400  # set high to rely on confirmed exit
-    
+
     # Exit confirmation
     exit_attempt_seconds: int = 30
     exit_delta_ratio_threshold: float = 0.60
@@ -531,7 +531,7 @@ class AbsorptionScannerParams(BaseModel):
     daily_tp_limit: float = 500.0
     session_reset_hour: int = 17
     session_reset_minute: int = 0
-    
+
     # Trading hours
     trading_start_hour: Optional[int] = None
     trading_end_hour: Optional[int] = None

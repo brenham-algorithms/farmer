@@ -177,9 +177,7 @@ class ProjectXOrderManager:
                 accountId=self.params.account_id,
                 contractId=self.params.contract_id,
             )
-            self.logger.info(
-                f"CLOSE POSITION: {self.params.contract_id}"
-            )
+            self.logger.info(f"CLOSE POSITION: {self.params.contract_id}")
             return result.get("success", False)
         except Exception as e:
             self.logger.error(f"CLOSE POSITION FAILED: {e}")
@@ -206,7 +204,8 @@ class ProjectXOrderManager:
 
         except Exception as e:
             self.logger.error(
-                f"REDUCE POSITION FAILED: {'BUY' if side == 0 else 'SELL'} " f"{size} — {e}"
+                f"REDUCE POSITION FAILED: {'BUY' if side == 0 else 'SELL'} "
+                f"{size} — {e}"
             )
             return None
 

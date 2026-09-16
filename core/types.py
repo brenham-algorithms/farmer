@@ -50,7 +50,9 @@ class Position:
                     abs(self.entries[0].price - self.stop_loss) / self.tick_size
                 )
                 tp_ticks = (
-                    round(abs(self.take_profit - self.entries[0].price) / self.tick_size)
+                    round(
+                        abs(self.take_profit - self.entries[0].price) / self.tick_size
+                    )
                     if self.take_profit != 0.0
                     else None
                 )
