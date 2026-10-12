@@ -13,8 +13,10 @@ from .models import (
     EmaMeanReversionParams,
     FarmerConfig,
     OrbParams,
+    OrderManagerParams,
     PriorDayHlBounceParams,
     ProjectXDataSource,
+    ProjectXOrderManagerParams,
     QueryConfig,
     StaticBounceParams,
     StaticLevelBounceConfirmedExitParams,
@@ -27,8 +29,6 @@ from .models import (
     VwapMeanReversionLadderParams,
     VwapMeanReversionParams,
     WickReversalParams,
-    ProjectXOrderManagerParams,
-    OrderManagerParams,
 )
 
 __all__ = [
