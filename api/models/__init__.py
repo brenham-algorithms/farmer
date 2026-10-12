@@ -13,8 +13,10 @@ from .models import (
     EmaMeanReversionParams,
     FarmerConfig,
     OrbParams,
+    OrderManagerParams,
     PriorDayHlBounceParams,
     ProjectXDataSource,
+    ProjectXOrderManagerParams,
     QueryConfig,
     StaticBounceParams,
     StaticLevelBounceConfirmedExitParams,
@@ -58,4 +60,6 @@ __all__ = [
     "FarmerConfig",
     "BacktestResult",
     "BacktestResponse",
+    "ProjectXOrderManagerParams",
+    "OrderManagerParams",
 ]

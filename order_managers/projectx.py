@@ -1,19 +1,12 @@
 import json
 import logging
-from typing import Any, Dict, List, Optional
+import threading
+from typing import Any, Dict, Optional
 
+import redis
 from projectx_client import Auth, Orders, Positions
-from pydantic import BaseModel
-from signalrcore.hub_connection_builder import HubConnectionBuilder
 
-
-class ProjectXOrderManagerParams(BaseModel):
-    base_url: str
-    user_hub_base_url: str
-    username: str
-    api_key: str
-    account_id: int
-    contract_id: str
+from api.models import ProjectXOrderManagerParams
 
 
 class ProjectXOrderManager:
@@ -21,12 +14,12 @@ class ProjectXOrderManager:
     Manages order dispatch and position synchronization via the
     ProjectX/TopstepX API.
 
-    Designed to be attached to Position objects. When present,
-    Position.close(), .cut(), and .add() automatically dispatch
-    orders to the broker.
+    Reads user hub events (orders, positions, accounts, trades) from
+    Redis channels published by the distributor, rather than connecting
+    to SignalR directly. This allows multiple farmer instances to share
+    a single market hub + user hub connection.
 
-    On startup, call sync() to query open positions and reconcile
-    local state with the server.
+    Order placement still goes directly to the ProjectX REST API.
     """
 
     def __init__(
@@ -54,49 +47,77 @@ class ProjectXOrderManager:
             jwt_token=self.jwt_token,
         )
 
-        # User hub for realtime fill and position events
-        self.user_hub = (
-            HubConnectionBuilder()
-            .with_url(
-                f"{params.user_hub_base_url}?access_token={self.jwt_token}",
-                options={
-                    "access_token_factory": lambda: self.jwt_token,
-                    "headers": {},
-                    "verify_ssl": True,
-                },
-            )
-            .configure_logging(logging.WARNING)
-            .with_automatic_reconnect(
-                {
-                    "type": "raw",
-                    "keep_alive_interval": 10,
-                    "reconnect_interval": 5,
-                    "max_attempts": 5,
-                }
-            )
-            .build()
-        )
-
-        # Register user hub handlers
-        self.user_hub.on_open(self._on_hub_open)
-        self.user_hub.on_close(self._on_hub_close)
-        self.user_hub.on_error(self._on_hub_error)
-        self.user_hub.on("GatewayUserOrder", self._on_order_event)
-        self.user_hub.on("GatewayUserPosition", self._on_position_event)
-        self.user_hub.on("GatewayUserAccount", self._on_account_event)
-        self.user_hub.on("GatewayUserTrade", self._on_trade_event)
+        # Redis subscription for user events
+        self.redis = redis.Redis(host=params.redis_host, port=params.redis_port, db=0)
+        self.pubsub = self.redis.pubsub()
+        self._listener_thread: Optional[threading.Thread] = None
+        self._stopping = False
 
     def start(self) -> None:
-        """Start the user hub connection. Call before trading begins."""
-        self.user_hub.start()
+        """Subscribe to user event channels and start listener thread."""
+        self.pubsub.subscribe(
+            "user:orders",
+            "user:positions",
+            "user:accounts",
+            "user:trades",
+        )
+
+        self._listener_thread = threading.Thread(target=self._listen, daemon=True)
+        self._listener_thread.start()
+
+        self.logger.info("order manager started — listening to Redis user events")
 
     def stop(self) -> None:
-        """Stop the user hub connection. Call on shutdown."""
-        self.user_hub.send("UnsubscribeAccounts", [])
-        self.user_hub.send("UnsubscribeOrders", [self.params.account_id])
-        self.user_hub.send("UnsubscribePositions", [self.params.account_id])
-        self.user_hub.send("UnsubscribeTrades", [self.params.account_id])
-        self.user_hub.stop()
+        """Stop the listener thread and clean up."""
+        self._stopping = True
+
+        try:
+            self.pubsub.unsubscribe()
+            self.pubsub.close()
+        except Exception:
+            pass
+
+        try:
+            self.redis.close()
+        except Exception:
+            pass
+
+        if self._listener_thread is not None:
+            self._listener_thread.join(timeout=2)
+
+        self.logger.info("order manager stopped")
+
+    def _listen(self) -> None:
+        """Background thread that reads user events from Redis."""
+        try:
+            for message in self.pubsub.listen():
+                if self._stopping:
+                    break
+
+                if message["type"] != "message":
+                    continue
+
+                try:
+                    channel = message["channel"]
+                    if isinstance(channel, bytes):
+                        channel = channel.decode("utf-8")
+
+                    data = json.loads(message["data"])
+
+                    if channel == "user:orders":
+                        self._on_order_event(data)
+                    elif channel == "user:positions":
+                        self._on_position_event(data)
+                    elif channel == "user:accounts":
+                        self._on_account_event(data)
+                    elif channel == "user:trades":
+                        self._on_trade_event(data)
+
+                except Exception as e:
+                    self.logger.error(f"Error processing user event: {e}")
+        except Exception:
+            if not self._stopping:
+                self.logger.error("Redis listener disconnected unexpectedly")
 
     # Reconciliation
 
@@ -209,32 +230,16 @@ class ProjectXOrderManager:
             )
             return None
 
-    # User hub event handlers
+    # User event handlers (received via Redis from distributor)
 
-    def _on_hub_open(self) -> None:
-        self.logger.info("user hub connected")
+    def _on_order_event(self, data: Any) -> None:
+        self.logger.debug(f"ORDER EVENT: {json.dumps(data, indent=2)}")
 
-        self.user_hub.send("SubscribeAccounts", [])
-        self.user_hub.send("SubscribeOrders", [self.params.account_id])
-        self.user_hub.send("SubscribePositions", [self.params.account_id])
-        self.user_hub.send("SubscribeTrades", [self.params.account_id])
+    def _on_position_event(self, data: Any) -> None:
+        self.logger.debug(f"POSITION EVENT: {json.dumps(data, indent=2)}")
 
-        self.logger.info("subscribed to user hub events")
+    def _on_account_event(self, data: Any) -> None:
+        self.logger.debug(f"ACCOUNT EVENT: {json.dumps(data, indent=2)}")
 
-    def _on_hub_close(self) -> None:
-        self.logger.info("user hub disconnected")
-
-    def _on_hub_error(self, error) -> None:
-        self.logger.error(f"user hub error: {error}")
-
-    def _on_order_event(self, args) -> None:
-        self.logger.debug(f"ORDER EVENT: {json.dumps(args, indent=2)}")
-
-    def _on_position_event(self, args) -> None:
-        self.logger.debug(f"POSITION EVENT: {json.dumps(args, indent=2)}")
-
-    def _on_account_event(self, args) -> None:
-        self.logger.debug(f"ACCOUNT EVENT: {json.dumps(args, indent=2)}")
-
-    def _on_trade_event(self, args) -> None:
-        self.logger.debug(f"TRADE EVENT: {json.dumps(args, indent=2)}")
+    def _on_trade_event(self, data: Any) -> None:
+        self.logger.debug(f"TRADE EVENT: {json.dumps(data, indent=2)}")

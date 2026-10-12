@@ -2,7 +2,7 @@ import logging
 
 from aggregators import ProjectXAggregator
 from api.models import StrategyConfig
-from order_managers import ProjectXOrderManager, ProjectXOrderManagerParams
+from order_managers import ProjectXOrderManager
 from strategies import build_strategy
 from tickers import ProjectXTicker, RedisTicker, TickerState
 
@@ -25,20 +25,13 @@ class Farmer:
 
         self.order_manager = None
         if (
-            strategy_conf.order_management is not None
-            and strategy_conf.order_management.enabled
+            strategy_conf.order_manager_params is not None
+            and strategy_conf.order_manager_params.enabled
         ):
-            if strategy_conf.order_management.kind == "projectx":
+            if strategy_conf.order_manager_params.kind == "projectx":
                 self.order_manager = ProjectXOrderManager(
                     logger,
-                    ProjectXOrderManagerParams(
-                        base_url=strategy_conf.order_management.base_url,
-                        user_hub_base_url=strategy_conf.order_management.user_hub_base_url,
-                        username=strategy_conf.order_management.username,
-                        api_key=strategy_conf.order_management.api_key,
-                        account_id=strategy_conf.order_management.account_id,
-                        contract_id=strategy_conf.order_management.contract_id,
-                    ),
+                    strategy_conf.order_manager_params,
                 )
 
         self.handler_state: TickerState = TickerState(
@@ -73,3 +66,13 @@ class Farmer:
             self.order_manager.start()
 
         self.ticker.start()
+
+        # ticker.start() returns after KeyboardInterrupt
+        self._shutdown()
+
+    def _shutdown(self):
+        if self.order_manager and self.handler_state.position is not None:
+            self.logger.info("Open position detected on shutdown — closing")
+            self.order_manager.close_position()
+        if self.order_manager:
+            self.order_manager.stop()
