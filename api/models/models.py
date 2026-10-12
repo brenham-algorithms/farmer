@@ -649,21 +649,25 @@ class AggregationParams(BaseModel):
     unit: str = "minutes"
 
 
-class OrderManagementConfig(BaseModel):
+class ProjectXOrderManagerParams(BaseModel):
     enabled: bool = False
     kind: Literal["projectx"] = "projectx"
     base_url: str
-    user_hub_base_url: str
     username: str
     api_key: str
     account_id: int
     contract_id: str
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+
+
+OrderManagerParams = Union[ProjectXOrderManagerParams]
 
 
 class StrategyConfig(BaseModel):
     ticker_params: Optional[TickerParams] = None
     aggregation_params: Optional[AggregationParams] = None
-    order_management: Optional[OrderManagementConfig] = None
+    order_manager_params: Optional[OrderManagerParams] = None
     persist_across_files: bool = False
     strategy_params: StrategyParams
 

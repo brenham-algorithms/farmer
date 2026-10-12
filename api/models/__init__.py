@@ -27,6 +27,8 @@ from .models import (
     VwapMeanReversionLadderParams,
     VwapMeanReversionParams,
     WickReversalParams,
+    ProjectXOrderManagerParams,
+    OrderManagerParams,
 )
 
 __all__ = [
@@ -58,4 +60,6 @@ __all__ = [
     "FarmerConfig",
     "BacktestResult",
     "BacktestResponse",
+    "ProjectXOrderManagerParams",
+    "OrderManagerParams",
 ]

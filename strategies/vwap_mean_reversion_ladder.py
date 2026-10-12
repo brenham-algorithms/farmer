@@ -355,7 +355,7 @@ def vwap_mean_reversion_ladder_live_handler(
             tick, num, direction, vwap=vwap_now, std_dev=std_dev
         )
         if add_signal is not None:
-            position.entries.append(Entry(price=add_signal.entry, size=add_signal.size))
+            position.add(add_signal.size, add_signal.entry)
 
             logger.info(
                 f"Scaled to {position.num_contracts()} contracts "
@@ -510,7 +510,7 @@ def vwap_mean_reversion_ladder_backtest_handler(
             tick, num, direction, vwap=vwap_now, std_dev=std_dev
         )
         if add_signal is not None:
-            position.entries.append(Entry(price=add_signal.entry, size=add_signal.size))
+            position.add(add_signal.size, add_signal.entry)
 
             logger.info(
                 f"Scaled to {position.num_contracts()} contracts "
