@@ -273,7 +273,7 @@ class DeltaScanner:
             stop_target=stop_loss,
         )
 
-    # --- Exit confirmation ---
+    # Exit confirmation
 
     def check_exit(self, tick: Tick, position_direction: str) -> bool:
         now = tick.t
