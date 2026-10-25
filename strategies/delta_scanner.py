@@ -383,8 +383,7 @@ def delta_scanner_handler(
 ) -> None:
     if type(state.strategy) != DeltaScanner:
         raise ValueError(
-            f"Expected DeltaScanner strategy in state, "
-            f"got {type(state.strategy)}"
+            f"Expected DeltaScanner strategy in state, " f"got {type(state.strategy)}"
         )
 
     strategy = state.strategy
