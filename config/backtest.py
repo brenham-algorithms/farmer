@@ -1,20 +1,28 @@
+import copy
 from typing import List
 
 import yaml
 from pydantic import BaseModel
 
 from api.models import BacktestConfig
+from config.overrides import apply_overrides
 
 
 class BacktestSettings(BaseModel):
     backtests: List[BacktestConfig]
 
     @classmethod
-    def build(cls, args) -> "BacktestSettings":
+    def build(cls, args, overrides: list[str] | None = None) -> "BacktestSettings":
         with open(args.config, "r") as f:
             raw = yaml.safe_load(f) or {}
 
         data = raw.get("backtests", [])
+
+        if overrides:
+            for i, backtest in enumerate(data):
+                if args.name == "all" or backtest.get("name") == args.name:
+                    # Copy first so overrides don't leak through shared YAML anchors
+                    data[i] = apply_overrides(copy.deepcopy(backtest), overrides)
 
         return cls(backtests=data)
 

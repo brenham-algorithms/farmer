@@ -6,10 +6,10 @@ from backtest import run_backtest_async
 from config import BacktestSettings, init_backtest_logger
 
 
-async def main(args) -> None:
+async def main(args, overrides=None) -> None:
     logger = init_backtest_logger(args.level)
 
-    settings = BacktestSettings.build(args)
+    settings = BacktestSettings.build(args, overrides=overrides)
 
     if args.name == "all":
         # Run all configured backtests in settings if specified
@@ -30,6 +30,6 @@ if __name__ == "__main__":
         description="Backtest runner for modular quant trading strategies",
     )
     BacktestSettings.set_args(parser)
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
-    asyncio.run(main(args))
+    asyncio.run(main(args, unknown))
