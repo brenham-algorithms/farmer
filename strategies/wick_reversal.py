@@ -89,6 +89,8 @@ class WickReversal:
         # Trading hours
         self.trading_start_hour = params.trading_start_hour
         self.trading_end_hour = params.trading_end_hour
+        self.trading_start_minute = params.trading_start_minute
+        self.trading_end_minute = params.trading_end_minute
 
         # Session
         self.session_reset_hour = params.session_reset_hour
@@ -299,16 +301,17 @@ class WickReversal:
                     self.trading_start_hour is not None
                     or self.trading_end_hour is not None
                 ):
-                    local_hour = now.astimezone(self.tz).hour
-                    if (
-                        self.trading_start_hour is not None
-                        and local_hour < self.trading_start_hour
+                    t_local = now.astimezone(self.tz)
+                    local_time = (t_local.hour, t_local.minute)
+                    if self.trading_start_hour is not None and local_time < (
+                        self.trading_start_hour,
+                        self.trading_start_minute,
                     ):
                         self._pending_signal = None
                         return None
-                    if (
-                        self.trading_end_hour is not None
-                        and local_hour >= self.trading_end_hour
+                    if self.trading_end_hour is not None and local_time >= (
+                        self.trading_end_hour,
+                        self.trading_end_minute,
                     ):
                         self._pending_signal = None
                         return None

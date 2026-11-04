@@ -11,6 +11,7 @@ from .delta_scanner import DeltaScanner
 from .ema_bounce import EmaBounce
 from .ema_mean_reversion import EmaMeanReversion
 from .ema_mean_reversion_confirmed import EmaMeanReversionConfirmed
+from .exhaustion_fade import ExhaustionFade
 from .opening_range_breakout import OpeningRangeBreakout
 from .prior_day_hl_bounce import PriorDayHlBounce
 from .static_bounce import StaticBounce
@@ -60,5 +61,7 @@ def build_strategy(
         return AbsorptionScannerWithDelta(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "delta_scanner":
         return DeltaScanner(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "exhaustion_fade":
+        return ExhaustionFade(logger, candles, config.strategy_params)
     else:
         raise ValueError(f"Unsupported strategy kind: {config.strategy_params.kind}")
