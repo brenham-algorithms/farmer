@@ -1,12 +1,49 @@
 import logging
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 from aggregators import CsvAggregator
 from api.models import BacktestConfig, BacktestResponse, BacktestResult
-from core import run_engine_async
+from core import Tick, run_engine_async
 from strategies import build_strategy
 from tickers import CsvTicker, TickerState
+
+
+def _has_trades_file(
+    config: BacktestConfig, bt_date: str, logger: logging.Logger
+) -> bool:
+    # RTH-only data sets have no files for Sundays or exchange holidays
+    if config.strategy.ticker_params is None:
+        return True  # The caller's validation reports this
+    data_dir = getattr(config.strategy.ticker_params.data_source, "data_dir", "")
+    path = Path(f"{data_dir}/glbx-mdp3-{bt_date}.trades.csv")
+    if not path.exists():
+        logger.warning(f"No trades file for {bt_date} ({path}), skipping")
+        return False
+    return True
+
+
+def flatten_at_end_of_file(
+    state: TickerState, last_tick: Optional[Tick], logger: logging.Logger
+) -> None:
+    """Close a position left open when the day's data ends, at the last trade price."""
+    position = state.position
+    if position is None or last_tick is None:
+        return
+
+    pnl = position.close(last_tick.price)
+    state.total_pnl += pnl
+    state.position = None
+
+    tz = ZoneInfo("America/Chicago")
+    ts_start = position.timestamp.replace(microsecond=0).astimezone(tz)
+    ts_end = last_tick.t.replace(microsecond=0).astimezone(tz)
+    logger.info(
+        f"End-of-file flatten {position.direction} @ {last_tick.price}, "
+        f"Start = {ts_start}, End = {ts_end}, PnL = ${pnl:.2f}"
+    )
 
 
 async def run_backtest_async(
@@ -47,6 +84,9 @@ async def _run_backtest_async_without_seeding(
 
     running_total = 0.0
     for bt_date in config.get_dates():
+        if not _has_trades_file(config, bt_date, logger):
+            continue
+
         logger.info(f"Running backtest {config.name} for date: {bt_date}")
 
         if not persist:
@@ -56,7 +96,9 @@ async def _run_backtest_async_without_seeding(
 
         ticker = CsvTicker(logger, config.strategy.ticker_params, bt_date)
 
-        await run_engine_async(ticker, logger, state, handler)
+        last_tick = await run_engine_async(ticker, logger, state, handler)
+        if config.strategy.flatten_at_end_of_file:
+            flatten_at_end_of_file(state, last_tick, logger)
 
         config.strategy.ticker_params.start_symbol = ticker.current_symbol
 
@@ -99,6 +141,9 @@ async def _run_backtest_async_with_seeding(
         logger = logging.getLogger("backtest_async_with_seeding")
 
     for bt_date in config.get_dates():
+        if not _has_trades_file(config, bt_date, logger):
+            continue
+
         d = datetime.strptime(bt_date, "%Y%m%d").date()
 
         logger.info(f"Running backtest {config.name} for date: {d}")
@@ -127,7 +172,9 @@ async def _run_backtest_async_with_seeding(
 
         ticker = CsvTicker(logger, config.strategy.ticker_params, bt_date)
 
-        await run_engine_async(ticker, logger, state, handler)
+        last_tick = await run_engine_async(ticker, logger, state, handler)
+        if config.strategy.flatten_at_end_of_file:
+            flatten_at_end_of_file(state, last_tick, logger)
 
         config.strategy.ticker_params.start_symbol = ticker.current_symbol
 

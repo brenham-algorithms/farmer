@@ -6,6 +6,7 @@ from .dummy import Dummy
 from .ema_bounce import EmaBounce
 from .ema_mean_reversion import EmaMeanReversion
 from .ema_mean_reversion_confirmed import EmaMeanReversionConfirmed
+from .exhaustion_fade import ExhaustionFade
 from .helpers import build_strategy
 from .opening_range_breakout import OpeningRangeBreakout
 from .prior_day_hl_bounce import PriorDayHlBounce
@@ -27,6 +28,7 @@ __all__ = [
     "EmaBounce",
     "EmaMeanReversion",
     "EmaMeanReversionConfirmed",
+    "ExhaustionFade",
     "OpeningRangeBreakout",
     "StaticBounce",
     "StaticLevelBounce",

@@ -394,6 +394,8 @@ class WickReversalParams(BaseModel):
     # Time filters
     trading_start_hour: Optional[int] = None
     trading_end_hour: Optional[int] = None
+    trading_start_minute: int = 0  # e.g. 8:30 CT RTH open = hour 8, minute 30
+    trading_end_minute: int = 0
 
     # Lookback for filtering on isolated highs and lows
     lookback_candles: Optional[int] = None
@@ -632,6 +634,53 @@ class DeltaScannerParams(BaseModel):
     trading_end_hour: Optional[int] = None
 
 
+class ExhaustionFadeParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["exhaustion_fade"] = "exhaustion_fade"
+    precision: int = 2
+
+    # Signal bar construction
+    lookback_bars: int = 30  # Bar must take out the high/low of the prior N bars
+    atr_period: int = 30
+    volume_avg_period: int = 30
+
+    # Exhaustion filters (evaluated on the completed 1-minute bar)
+    min_volume_multiple: float = 1.5  # Bar volume vs rolling average
+    min_delta_ratio: float = 0.0  # Aggressors must push into the extreme...
+    max_delta_ratio: float = (
+        0.15  # ...but not dominate it (strong initiative continues)
+    )
+    max_close_position: float = (
+        0.40  # Close within this fraction of the bar from the far end
+    )
+    direction: Optional[Literal["LONG", "SHORT"]] = None  # None trades both sides
+
+    # Position sizing
+    num_contracts: int = 1
+    use_brackets: bool = False
+
+    # Risk/reward in ATR multiples
+    stop_atr_multiple: float = 3.0
+    target_atr_multiple: float = 2.5
+
+    # Trading windows (America/Chicago)
+    entry_start_hour: int = 8
+    entry_start_minute: int = 45
+    entry_end_hour: int = 14
+    entry_end_minute: int = 0
+    flat_hour: int = 14
+    flat_minute: int = 59
+
+    cooldown_minutes: int = 15
+
+    # Optional session guards
+    max_trades_per_session: Optional[int] = None
+    daily_loss_limit: Optional[float] = None
+    session_reset_hour: int = 17
+    session_reset_minute: int = 0
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -650,6 +699,7 @@ StrategyParams = Union[
     AbsorptionScannerParams,
     AbsorptionScannerWithDeltaParams,
     DeltaScannerParams,
+    ExhaustionFadeParams,
 ]
 
 
@@ -714,6 +764,8 @@ class StrategyConfig(BaseModel):
     aggregation_params: Optional[AggregationParams] = None
     order_manager_params: Optional[OrderManagerParams] = None
     persist_across_files: bool = False
+    # Backtests only: close any position still open when a day's file ends
+    flatten_at_end_of_file: bool = False
     strategy_params: StrategyParams
 
 
