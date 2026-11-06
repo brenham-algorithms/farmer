@@ -133,11 +133,25 @@ class AbsorptionScanner:
         # Trading hours
         self.trading_start_hour = params.trading_start_hour
         self.trading_end_hour = params.trading_end_hour
+        self.trading_start_minute = params.trading_start_minute
+        self.trading_end_minute = params.trading_end_minute
+
+        # Opposing-flow filter
+        self.flow_lookback_minutes = params.flow_lookback_minutes
+        self.min_opposing_flow = params.min_opposing_flow
 
         # Rolling window state
         self._window: deque[WindowTick] = deque()
         self._buckets: Dict[float, BucketData] = defaultdict(BucketData)
         self._prev_price: Optional[float] = None
+
+        # Completed 1-minute (delta, volume) bars for the opposing-flow filter
+        self._flow_bars: deque[tuple[int, int]] = deque(
+            maxlen=self.flow_lookback_minutes
+        )
+        self._flow_minute: Optional[datetime] = None
+        self._flow_delta: int = 0
+        self._flow_volume: int = 0
 
         # Entry state
         self._cooldown_until: Optional[datetime] = None
@@ -201,6 +215,26 @@ class AbsorptionScanner:
         self._window.append(wt)
         self._buckets[bucket].add(wt)
         self._prev_price = tick.price
+
+    def _update_flow(self, tick: Tick) -> None:
+        minute = tick.t.replace(second=0, microsecond=0)
+        if self._flow_minute is not None and minute != self._flow_minute:
+            self._flow_bars.append((self._flow_delta, self._flow_volume))
+            self._flow_delta = 0
+            self._flow_volume = 0
+        self._flow_minute = minute
+        self._flow_delta += tick.delta()
+        self._flow_volume += tick.size
+
+    def directional_flow(self, direction: str) -> Optional[float]:
+        """Net delta / volume over the completed lookback bars, positive = flow with the trade."""
+        if len(self._flow_bars) < self.flow_lookback_minutes:
+            return None
+        volume = sum(v for _, v in self._flow_bars)
+        if volume <= 0:
+            return None
+        flow = sum(d for d, _ in self._flow_bars) / volume
+        return flow if direction == "LONG" else -flow
 
     def _scan_for_defender(self, price: float) -> Optional[Dict[str, Any]]:
         """Scan buckets near current price for high absorption."""
@@ -275,10 +309,15 @@ class AbsorptionScanner:
         if session != self._current_session_key:
             self._daily_pnl = 0.0
             self._current_session_key = session
+            self._flow_bars.clear()
+            self._flow_minute = None
+            self._flow_delta = 0
+            self._flow_volume = 0
 
-        # Always update the rolling window
+        # Always update the rolling window and the minute flow bars
         self._expire_old_ticks(now)
         self._add_tick(tick)
+        self._update_flow(tick)
 
         # In-position guard
         in_position = kwargs.get("in_position", False)
@@ -287,15 +326,16 @@ class AbsorptionScanner:
 
         # Trading hours filter
         if self.trading_start_hour is not None or self.trading_end_hour is not None:
-            local_hour = now.astimezone(self.tz).hour
-            if (
-                self.trading_start_hour is not None
-                and local_hour < self.trading_start_hour
+            t_local = now.astimezone(self.tz)
+            local_time = (t_local.hour, t_local.minute)
+            if self.trading_start_hour is not None and local_time < (
+                self.trading_start_hour,
+                self.trading_start_minute,
             ):
                 return None
-            if (
-                self.trading_end_hour is not None
-                and local_hour >= self.trading_end_hour
+            if self.trading_end_hour is not None and local_time >= (
+                self.trading_end_hour,
+                self.trading_end_minute,
             ):
                 return None
 
@@ -317,9 +357,28 @@ class AbsorptionScanner:
         if self.direction is not None and defender["direction"] != self.direction:
             return None
 
-        return self._build_entry(tick, defender)
+        flow = self.directional_flow(defender["direction"])
+        if self.min_opposing_flow is not None and (
+            flow is None or flow > -self.min_opposing_flow
+        ):
+            # A skipped signal still starts the cooldown, so the same absorption
+            # isn't re-detected and logged on every following tick
+            self._cooldown_until = tick.t + timedelta(seconds=self.cooldown_seconds)
+            flow_txt = "n/a" if flow is None else f"{flow:+.3f}"
+            self.logger.info(
+                f"[{self._ct(tick.t)}] {defender['direction']} ABSORPTION FILTERED "
+                f"(passive {'buyer' if defender['direction'] == 'LONG' else 'seller'} "
+                f"@ {defender['bucket']:.{self.precision}f}) "
+                f"flow{self.flow_lookback_minutes}={flow_txt} "
+                f"needs <= {-self.min_opposing_flow:+.3f}"
+            )
+            return None
 
-    def _build_entry(self, tick: Tick, defender: Dict[str, Any]) -> Signal:
+        return self._build_entry(tick, defender, flow)
+
+    def _build_entry(
+        self, tick: Tick, defender: Dict[str, Any], flow: Optional[float] = None
+    ) -> Signal:
         direction = defender["direction"]
         entry = tick.price
         ar = defender["ar"]
@@ -346,7 +405,9 @@ class AbsorptionScanner:
             f"[{self._ct(tick.t)}] {Fore.GREEN if direction == 'LONG' else Fore.RED}{direction}{Style.RESET_ALL} ABSORPTION DETECTED "
             f"({defender_type} @ {bucket:.{self.precision}f}) "
             f"entry={entry} ar={ar:.3f} abs_vol={abs_vol} vol={total_vol} "
-            f"tp={take_profit} sl={stop_loss}"
+            f"tp={take_profit} sl={stop_loss} "
+            f"flow{self.flow_lookback_minutes}="
+            f"{'n/a' if flow is None else f'{flow:+.3f}'}"
         )
 
         return Signal(
@@ -441,6 +502,10 @@ class AbsorptionScanner:
         self._window.clear()
         self._buckets.clear()
         self._prev_price = None
+        self._flow_bars.clear()
+        self._flow_minute = None
+        self._flow_delta = 0
+        self._flow_volume = 0
         self._cooldown_until = None
         self._exit_attempt = None
         self._daily_pnl = 0.0
