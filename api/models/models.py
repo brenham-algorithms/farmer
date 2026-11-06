@@ -537,6 +537,14 @@ class AbsorptionScannerParams(BaseModel):
     # Trading hours
     trading_start_hour: Optional[int] = None
     trading_end_hour: Optional[int] = None
+    trading_start_minute: int = 0  # e.g. 8:30 CT RTH open = hour 8, minute 30
+    trading_end_minute: int = 0
+
+    # Opposing-flow filter: only take signals that follow aggression against the trade.
+    # Flow = net delta / volume over the last flow_lookback_minutes completed 1-minute bars,
+    # signed in the trade's direction. A signal passes if flow <= -min_opposing_flow.
+    flow_lookback_minutes: int = 15
+    min_opposing_flow: Optional[float] = None  # e.g. 0.06; None disables the filter
 
 
 class AbsorptionScannerWithDeltaParams(BaseModel):
@@ -681,6 +689,97 @@ class ExhaustionFadeParams(BaseModel):
     session_reset_minute: int = 0
 
 
+class GapFillParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["gap_fill"] = "gap_fill"
+    precision: int = 2
+
+    # Gap definition: the entry-time price vs the prior RTH session's last trade before
+    # rth_end. Gap size is measured against the prior session's RTH range (high - low).
+    min_gap_range_ratio: float = 0.5  # |gap| / prior RTH range must be at least this
+    max_gap_range_ratio: Optional[float] = None
+    min_gap_points: Optional[float] = None
+    direction: Optional[Literal["LONG", "SHORT"]] = None  # None trades both sides
+
+    # Exits as multiples of the gap, measured from the entry price
+    fill_fraction: float = 1.0  # Target: 1.0 = the prior close, 0.5 = half the gap
+    stop_gap_multiple: float = 1.0  # Stop distance beyond the entry, against the fade
+    max_stop_points: Optional[float] = None  # Skip the trade if the stop would be wider
+
+    # Position sizing
+    num_contracts: int = 1
+    use_brackets: bool = False
+
+    # Sessions and windows (America/Chicago)
+    rth_start_hour: int = 8
+    rth_start_minute: int = 30
+    rth_end_hour: int = 15
+    rth_end_minute: int = 0
+    entry_hour: int = 8
+    entry_minute: int = 30
+    max_entry_delay_minutes: int = (
+        5  # Don't enter if the first tick arrives later than this
+    )
+    flat_hour: int = 14
+    flat_minute: int = 59
+
+    # Data hygiene
+    skip_dates: List[str] = []  # YYYYMMDD, e.g. continuous-contract roll days
+    min_prior_session_minutes: int = 300  # Skip after half days / partial data
+    max_prior_session_age_days: int = (
+        5  # Prior session must be this recent (calendar days)
+    )
+
+
+class NoiseAreaParams(BaseModel):
+    tick_size: float
+    tick_value: float
+    kind: Literal["noise_area"] = "noise_area"
+    precision: int = 2
+
+    # Noise area (Zarattini, Aziz & Barbon 2024): for each minute of the session,
+    # sigma = mean over the last lookback_days sessions of |price / open - 1| at that minute.
+    # Upper = max(open, prior close) * (1 + sigma); lower = min(open, prior close) * (1 - sigma).
+    lookback_days: int = 14
+    band_multiplier: float = 1.0  # Scales sigma; the paper uses 1.0
+
+    # Decisions are only made at checkpoints, every check_interval_minutes from first_check
+    # through last_check (CT). Enter when price is outside the noise area; exit a long
+    # below max(upper, VWAP) and a short above min(lower, VWAP). An exit can flip.
+    check_interval_minutes: int = 30
+    first_check_hour: int = 9
+    first_check_minute: int = 0
+    last_check_hour: int = 14
+    last_check_minute: int = 30
+    use_vwap_stop: bool = True
+    direction: Optional[Literal["LONG", "SHORT"]] = None  # None trades both sides
+
+    # Optional hard stop, checked on every tick (not part of the paper's rules)
+    stop_loss_points: Optional[float] = None
+
+    # Position sizing
+    num_contracts: int = 1
+
+    # Sessions (America/Chicago)
+    rth_start_hour: int = 8
+    rth_start_minute: int = 30
+    rth_end_hour: int = 15
+    rth_end_minute: int = 0
+    flat_hour: int = 14
+    flat_minute: int = 59
+
+    # Data hygiene
+    skip_dates: List[str] = []  # YYYYMMDD, e.g. continuous-contract roll days
+    min_session_minutes: int = (
+        300  # Shorter sessions (half days) are left out of the history
+    )
+    max_open_delay_minutes: int = (
+        5  # The session's first trade must be this close to the open
+    )
+    max_prior_session_age_days: int = 5
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -700,6 +799,8 @@ StrategyParams = Union[
     AbsorptionScannerWithDeltaParams,
     DeltaScannerParams,
     ExhaustionFadeParams,
+    GapFillParams,
+    NoiseAreaParams,
 ]
 
 
