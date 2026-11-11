@@ -780,6 +780,37 @@ class NoiseAreaParams(BaseModel):
     max_prior_session_age_days: int = 5
 
 
+class DayTypeMonitorParams(BaseModel):
+    kind: Literal["day_type_monitor"] = "day_type_monitor"
+    precision: int = 2
+
+    # Never trades: labels the RTH session so far and logs label changes, snapshots and a
+    # daily summary. The labels describe the day so far; they are not predictions.
+    #   trend up/down: trendness (|last - open| / range) >= trend_min_trendness
+    #   range: trendness < range_max_trendness with few VWAP crosses
+    #   chop: trendness < range_max_trendness and crosses_per_hour >= chop_crosses_per_hour
+    #   mixed: in between
+    min_minutes: int = 30  # "too early" before this
+    trend_min_trendness: float = 0.6
+    range_max_trendness: float = 0.35
+    chop_crosses_per_hour: float = 4.0
+    confirm_minutes: int = 5  # A new label must hold this long before it's logged
+    # To leave its current label, trendness must clear a threshold by this much
+    # (crosses_per_hour by 10x this), so values near a threshold don't flip the label
+    hysteresis: float = 0.05
+    snapshot_minutes: int = 30  # Log the state this often; 0 disables
+
+    # range_vs_normal compares today's range with the average over this many full sessions
+    lookback_days: int = 20
+    min_session_minutes: int = 300  # Shorter sessions (half days) are left out
+
+    # Sessions (America/Chicago)
+    rth_start_hour: int = 8
+    rth_start_minute: int = 30
+    rth_end_hour: int = 15
+    rth_end_minute: int = 0
+
+
 StrategyParams = Union[
     StaticBounceParams,
     EmaMeanReversionParams,
@@ -801,6 +832,7 @@ StrategyParams = Union[
     ExhaustionFadeParams,
     GapFillParams,
     NoiseAreaParams,
+    DayTypeMonitorParams,
 ]
 
 

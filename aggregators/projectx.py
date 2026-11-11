@@ -1,11 +1,13 @@
 import logging
-import math
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 from projectx_client import Auth, MarketData
 
 from api.models import AggregationParams
+
+# retrieveBars returns at most this many bars per request
+MAX_BARS_PER_REQUEST = 20000
 
 
 class ProjectXAggregator:
@@ -41,21 +43,40 @@ class ProjectXAggregator:
         self._poll()
 
         # We want candles in ascending order (oldest first) for moving average calculations
-        return list(reversed(self.candles))
+        return self.candles
 
     def _poll(self) -> None:
-        num_candles = math.ceil(60 / self.candle_length) * 24 * self.days
         now = datetime.now(timezone.utc)
         start = now - timedelta(days=self.days)
 
-        # Poll candles from server
-        self.candles = self.market_data_client.bars(
-            contractId=self.contract_id,
-            live=False,
-            startTime=start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            endTime=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            unit=self.unit,
-            unitNumber=self.candle_length,
-            limit=num_candles,
-            includePartialBar=False,
+        # Split the window into chunks the API can return in one request
+        chunk = timedelta(minutes=MAX_BARS_PER_REQUEST * self.candle_length)
+        by_time: Dict[str, Dict[str, Any]] = {}
+        chunk_start = start
+        while chunk_start < now:
+            chunk_end = min(chunk_start + chunk, now)
+            bars = self.market_data_client.bars(
+                contractId=self.contract_id,
+                live=False,
+                startTime=chunk_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                endTime=chunk_end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                unit=self.unit,
+                unitNumber=self.candle_length,
+                limit=MAX_BARS_PER_REQUEST,
+                includePartialBar=False,
+            )
+            for bar in bars:
+                by_time[bar["t"]] = bar
+            chunk_start = chunk_end
+
+        self.candles = sorted(by_time.values(), key=lambda bar: _parse_time(bar["t"]))
+        self.logger.info(
+            f"Fetched {len(self.candles)} {self.candle_length}-minute candles "
+            f"for {self.contract_id} over {self.days} days"
         )
+
+
+def _parse_time(t: Any) -> datetime:
+    if isinstance(t, datetime):
+        return t
+    return datetime.fromisoformat(str(t).replace("Z", "+00:00"))
