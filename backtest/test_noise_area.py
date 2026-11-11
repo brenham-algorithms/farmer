@@ -170,6 +170,27 @@ def test_seeded_from_candles() -> None:
     assert state.position is not None and state.position.direction == "LONG"
 
 
+def test_started_mid_session_from_candles() -> None:
+    # A live start at 09:41: today's session so far comes from the candles (no symbol),
+    # then live ticks continue it. The 09:30 checkpoint is stale; 10:00 trades.
+    candles = []
+    for d in HISTORY_DAYS:
+        candles += [candle(d, 0, 100, 100), candle(d, 15, 101, 101)]
+        candles.append(candle(d, 389, 100, 100))
+    candles += [candle(TODAY, 0, 99, 100), candle(TODAY, 15, 101, 101)]
+    strategy = make_strategy(candles)
+    state = run(
+        strategy,
+        [tick(TODAY, 71, 102.0, "F.US.MNQ"), tick(TODAY, 90, 102.0, "F.US.MNQ")],
+    )
+    assert state.position is not None
+    assert state.position.timestamp == at(TODAY, 90)
+    bands = strategy.bands(90)
+    assert bands is not None and bands.upper == pytest.approx(
+        101.0
+    )  # max(open 99, prior close 100) + 1%
+
+
 def test_flat_before_first_checkpoint_rejected() -> None:
     with pytest.raises(ValueError):
         make_strategy(first_check_hour=8, first_check_minute=30)

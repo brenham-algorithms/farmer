@@ -63,8 +63,16 @@ Decisions are made only at checkpoints: every `check_interval_minutes` (30) from
   - **Backtests:** use `persist_across_files: true`. The first 14 sessions of each run only
     build history.
   - **Live:** seed with 1-minute candles through `aggregation_params`. 14 sessions is about 20
-    calendar days, so `lookback_days` there needs to be at least about 21. The ProjectX
-    aggregator requests 1,440 candles per day, so check the API's limit.
+    calendar days; the `mnq_noise_area` farmer uses 24 to allow for holidays. The ProjectX
+    aggregator splits the request into chunks of 20,000 bars (the API's limit per request).
+    A farmer started mid-session takes today's open and VWAP from the candles and joins at
+    the next checkpoint.
+  - **Live, early closes:** the time exit is 14:59 CT, so list early-close days (Thanksgiving
+    and the day after, Christmas Eve) in `skip_dates`. The backtest traded them and flattened
+    at the end of the file.
+  - **Live, rolls:** the seed candles come from a single `contract_id`. For about three weeks
+    after switching to the new contract, part of its history is from when it was the thinly
+    traded back month. The backtest used the continuous front month instead.
 - **Half days** (sessions shorter than `min_session_minutes`) are left out of the history. A
   session whose first trade came more than `max_open_delay_minutes` after 08:30 has no
   reliable open, so it isn't traded and isn't added to the history.

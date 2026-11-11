@@ -7,6 +7,7 @@ from core import Strategy
 from .absorption_bounce import AbsorptionBounce
 from .absorption_scanner import AbsorptionScanner
 from .absorption_scanner_with_delta import AbsorptionScannerWithDelta
+from .day_type_monitor import DayTypeMonitor
 from .delta_scanner import DeltaScanner
 from .ema_bounce import EmaBounce
 from .ema_mean_reversion import EmaMeanReversion
@@ -69,5 +70,7 @@ def build_strategy(
         return GapFill(logger, candles, config.strategy_params)
     elif config.strategy_params.kind == "noise_area":
         return NoiseArea(logger, candles, config.strategy_params)
+    elif config.strategy_params.kind == "day_type_monitor":
+        return DayTypeMonitor(logger, candles, config.strategy_params)
     else:
         raise ValueError(f"Unsupported strategy kind: {config.strategy_params.kind}")

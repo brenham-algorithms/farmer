@@ -1,6 +1,7 @@
 from .absorption_bounce import AbsorptionBounce
 from .absorption_scanner import AbsorptionScanner
 from .absorption_scanner_with_delta import AbsorptionScannerWithDelta
+from .day_type_monitor import DayTypeMonitor
 from .delta_scanner import DeltaScanner
 from .dummy import Dummy
 from .ema_bounce import EmaBounce
@@ -33,6 +34,7 @@ __all__ = [
     "ExhaustionFade",
     "GapFill",
     "NoiseArea",
+    "DayTypeMonitor",
     "OpeningRangeBreakout",
     "StaticBounce",
     "StaticLevelBounce",
