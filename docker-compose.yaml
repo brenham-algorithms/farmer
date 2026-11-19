@@ -1,0 +1,113 @@
+# Farmer stack: Redis, the distributor, and one container per farmer.
+#
+# Layout expected on the server (repos cloned side by side):
+#   ~/farmer/               this repo, with config.yaml next to this file
+#   ~/distributor/          with its own config.yaml
+#
+# Both config.yaml files are gitignored and hold credentials. They're mounted
+# read-only and never baked into an image. Containers reach Redis by its service
+# name on the "farm" network, so the server configs must use redis_host: "redis"
+# (distributor config, each farmer's data_source and order_manager_params).
+#
+# Usage:
+#   docker compose up -d --build              # Redis, distributor, paper farmers
+#   docker compose --profile live up -d       # also the farmers that place orders
+#   docker compose logs -f mnq_day_type
+#   docker compose exec redis redis-cli SUBSCRIBE "ticks:CON.F.US.MNQ.Z26"
+#   docker compose down                       # SIGINT to each: farmers flatten, distributor unsubscribes
+#
+# Only farmers with data_source kind "redis" belong here. A "projectx" data source
+# opens its own SignalR connection, and ProjectX allows one at a time, so it would
+# fight the distributor.
+
+x-farmer: &farmer
+  image: farmer
+  build: .
+  volumes:
+    - ./config.yaml:/app/config.yaml:ro
+  networks: [farm]
+  depends_on:
+    redis:
+      condition: service_healthy
+    distributor:
+      condition: service_started
+  stop_grace_period: 30s
+  restart: unless-stopped
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: 50m
+      max-file: "5"
+
+# Farmers that place orders don't restart automatically: after a crash the broker
+# may still hold a position the new process doesn't know about. Check the account
+# before starting one again.
+x-live-farmer: &live-farmer
+  <<: *farmer
+  restart: "no"
+  profiles: [live]
+
+services:
+  redis:
+    image: redis:7.4.2-alpine
+    # Pub/sub only: nothing to persist
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks: [farm]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    logging: *logging
+
+  distributor:
+    image: distributor
+    build: ../distributor
+    command: ["--config", "config.yaml", "--level", "info"]
+    volumes:
+      - ../distributor/config.yaml:/app/config.yaml:ro
+    networks: [farm]
+    depends_on:
+      redis:
+        condition: service_healthy
+    stop_grace_period: 30s
+    restart: unless-stopped
+    logging: *logging
+
+  # --- Paper farmers (no order manager) ---
+  mnq_day_type:
+    <<: *farmer
+    command: ["--name", "mnq_day_type", "--level", "info"]
+
+  mnq_absorption_scanner:
+    <<: *farmer
+    command: ["--name", "mnq_absorption_scanner", "--level", "info"]
+
+  mnq_absorption_bounce:
+    <<: *farmer
+    command: ["--name", "mnq_absorption_bounce", "--level", "info"]
+
+  cl_wick_reversal:
+    <<: *farmer
+    command: ["--name", "cl_wick_reversal", "--level", "info"]
+
+  cl_absorption_scanner:
+    <<: *farmer
+    command: ["--name", "cl_absorption_scanner", "--level", "info"]
+
+  # --- Live farmers (place orders): only with --profile live ---
+  mnq_noise_area:
+    <<: *live-farmer
+    command: ["--name", "mnq_noise_area", "--level", "info"]
+
+  mes_vwap_mean_reversion_ladder:
+    <<: *live-farmer
+    command: ["--name", "mes_vwap_mean_reversion_ladder", "--level", "info"]
+
+  mnq_absorption_scanner_live:
+    <<: *live-farmer
+    command: ["--name", "mnq_absorption_scanner_live", "--level", "info"]
+
+networks:
+  farm:

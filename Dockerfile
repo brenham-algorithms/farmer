@@ -1,5 +1,8 @@
 # Farmer: one container per farmer, with farm.py as the entrypoint.
 #
+# Normally started by docker-compose.yaml in the farmer repo, on a Docker network
+# with redis_host: "redis". The docker run below is for standalone runs on the host network.
+#
 # Build:
 #   docker build -t farmer .
 #
