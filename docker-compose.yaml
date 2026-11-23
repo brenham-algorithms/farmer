@@ -10,12 +10,15 @@
 # (distributor config, each farmer's data_source and order_manager_params).
 #
 # Usage:
-#   docker compose up -d --build              # Redis, distributor, paper farmers
-#   docker compose --profile live up -d       # also the farmers that place orders
+#   docker compose up -d --build              # Redis, distributor, all farmers
 #   docker compose logs -f mnq_day_type
 #   docker compose exec redis redis-cli SUBSCRIBE "ticks:CON.F.US.MNQ.Z26"
 #   redis-cli -h <server-ip> PING             # from another machine on the LAN (port 6379)
 #   docker compose down                       # SIGINT to each: farmers flatten, distributor unsubscribes
+#
+# This stack is for forward testing and logging: every farmer here should have its
+# order manager disabled. To trade live, run that farmer on another machine against
+# this Redis (see the redis service below).
 #
 # Only farmers with data_source kind "redis" belong here. A "projectx" data source
 # opens its own SignalR connection, and ProjectX allows one at a time, so it would
@@ -39,14 +42,6 @@ x-farmer: &farmer
     options:
       max-size: 50m
       max-file: "5"
-
-# Farmers that place orders don't restart automatically: after a crash the broker
-# may still hold a position the new process doesn't know about. Check the account
-# before starting one again.
-x-live-farmer: &live-farmer
-  <<: *farmer
-  restart: "no"
-  profiles: [live]
 
 services:
   redis:
@@ -82,7 +77,7 @@ services:
     restart: unless-stopped
     logging: *logging
 
-  # --- Paper farmers (no order manager) ---
+  # --- Farmers (each must have a matching entry in config.yaml) ---
   mnq_day_type:
     <<: *farmer
     command: ["--name", "mnq_day_type", "--level", "info"]
@@ -90,10 +85,6 @@ services:
   mnq_absorption_scanner:
     <<: *farmer
     command: ["--name", "mnq_absorption_scanner", "--level", "info"]
-
-  mnq_absorption_bounce:
-    <<: *farmer
-    command: ["--name", "mnq_absorption_bounce", "--level", "info"]
 
   cl_wick_reversal:
     <<: *farmer
@@ -103,18 +94,13 @@ services:
     <<: *farmer
     command: ["--name", "cl_absorption_scanner", "--level", "info"]
 
-  # --- Live farmers (place orders): only with --profile live ---
   mnq_noise_area:
-    <<: *live-farmer
+    <<: *farmer
     command: ["--name", "mnq_noise_area", "--level", "info"]
 
   mes_vwap_mean_reversion_ladder:
-    <<: *live-farmer
+    <<: *farmer
     command: ["--name", "mes_vwap_mean_reversion_ladder", "--level", "info"]
-
-  mnq_absorption_scanner_live:
-    <<: *live-farmer
-    command: ["--name", "mnq_absorption_scanner_live", "--level", "info"]
 
 networks:
   farm:
