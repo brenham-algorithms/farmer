@@ -14,6 +14,7 @@
 #   docker compose --profile live up -d       # also the farmers that place orders
 #   docker compose logs -f mnq_day_type
 #   docker compose exec redis redis-cli SUBSCRIBE "ticks:CON.F.US.MNQ.Z26"
+#   redis-cli -h <server-ip> PING             # from another machine on the LAN (port 6379)
 #   docker compose down                       # SIGINT to each: farmers flatten, distributor unsubscribes
 #
 # Only farmers with data_source kind "redis" belong here. A "projectx" data source
@@ -53,6 +54,12 @@ services:
     # Pub/sub only: nothing to persist
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     networks: [farm]
+    # Published on the LAN so a farmer on another machine can use this stack's
+    # distributor feed (ProjectX allows only one distributor). There's no password,
+    # so this relies on the server being reachable only from the private network.
+    # Docker's published ports bypass ufw, so a ufw rule won't restrict this.
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
