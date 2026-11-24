@@ -40,3 +40,10 @@ class FarmSettings(BaseModel):
             default="INFO",
             help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
         )
+
+        parser.add_argument(
+            "--log-dir",
+            type=str,
+            default=None,
+            help="Also write one log file per trading session to {log-dir}/{name}/",
+        )
