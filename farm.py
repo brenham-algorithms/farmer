@@ -1,11 +1,13 @@
 import argparse
+import os
 
 from config import FarmSettings, init_backtest_logger
 from farm import Farmer
 
 
 def main(args, overrides=None) -> None:
-    logger = init_backtest_logger(args.level)
+    log_dir = os.path.join(args.log_dir, args.name) if args.log_dir else None
+    logger = init_backtest_logger(args.level, log_dir=log_dir)
 
     settings = FarmSettings.build(args, overrides=overrides)
 

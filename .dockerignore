@@ -5,6 +5,7 @@ config.*.yaml
 
 # Local data, environments and build output
 *_historical/
+data/
 venv/
 .venv/
 **/__pycache__/

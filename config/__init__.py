@@ -2,6 +2,7 @@ from .backtest import BacktestSettings
 from .discover import DiscoverSettings
 from .farm import FarmSettings
 from .logging import (
+    SessionFileHandler,
     init_backtest_logger,
     init_null_logger,
     init_strucutred_logger,
@@ -9,6 +10,7 @@ from .logging import (
 )
 
 __all__ = [
+    "SessionFileHandler",
     "BacktestSettings",
     "FarmSettings",
     "DiscoverSettings",

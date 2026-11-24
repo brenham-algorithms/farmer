@@ -12,6 +12,7 @@
 # Usage:
 #   docker compose up -d --build              # Redis, distributor, all farmers
 #   docker compose logs -f mnq_day_type
+#   tail -f data/logs/mnq_day_type/$(ls data/logs/mnq_day_type | tail -1)
 #   docker compose exec redis redis-cli SUBSCRIBE "ticks:CON.F.US.MNQ.Z26"
 #   redis-cli -h <server-ip> PING             # from another machine on the LAN (port 6379)
 #   docker compose down                       # SIGINT to each: farmers flatten, distributor unsubscribes
@@ -20,6 +21,10 @@
 # order manager disabled. To trade live, run that farmer on another machine against
 # this Redis (see the redis service below).
 #
+# Farmers also write one log file per trading session to data/logs/{farmer}/{date}.log.
+# Create data/ before the first `up`, as the user that runs compose: if Docker creates
+# it, it's owned by root and the farmers (uid 1000) can't write to it.
+#
 # Only farmers with data_source kind "redis" belong here. A "projectx" data source
 # opens its own SignalR connection, and ProjectX allows one at a time, so it would
 # fight the distributor.
@@ -27,8 +32,11 @@
 x-farmer: &farmer
   image: farmer
   build: .
+  # Every farmer logs to data/logs/{name}/ as well as stdout
+  entrypoint: ["python", "farm.py", "--log-dir", "/app/data/logs"]
   volumes:
     - ./config.yaml:/app/config.yaml:ro
+    - ./data:/app/data
   networks: [farm]
   depends_on:
     redis:
