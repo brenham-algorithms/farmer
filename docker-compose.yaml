@@ -94,21 +94,18 @@ services:
     <<: *farmer
     command: ["--name", "mnq_absorption_scanner", "--level", "info"]
 
-  cl_wick_reversal:
-    <<: *farmer
-    command: ["--name", "cl_wick_reversal", "--level", "info"]
-
-  cl_absorption_scanner:
-    <<: *farmer
-    command: ["--name", "cl_absorption_scanner", "--level", "info"]
-
   mnq_noise_area:
     <<: *farmer
-    command: ["--name", "mnq_noise_area", "--level", "info"]
+    # debug logs the noise area bands and checks
+    command: ["--name", "mnq_noise_area", "--level", "debug"]
 
-  mes_vwap_mean_reversion_ladder:
+  mnq_vwap_mean_reversion_ladder:
     <<: *farmer
-    command: ["--name", "mes_vwap_mean_reversion_ladder", "--level", "info"]
+    command: ["--name", "mnq_vwap_mean_reversion_ladder", "--level", "info"]
+
+  mnq_wick_reversal:
+    <<: *farmer
+    command: ["--name", "mnq_wick_reversal", "--level", "info"]
 
 networks:
   farm:
